@@ -3,3 +3,4 @@ Cargo.lock
 node_modules/
 # fetched with Maven for the JavaRosa side of the oracle; never committed
 lib/
+.DS_Store
