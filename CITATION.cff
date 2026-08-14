@@ -6,6 +6,7 @@ authors:
   - family-names: "Leite"
     given-names: "André"
     email: "leite@de.ufpe.br"
+doi: "10.5281/zenodo.21940201"
 repository-code: "https://github.com/milkway/rxeval"
 url: "https://milkway.github.io/rxeval/"
 license: BSD-2-Clause

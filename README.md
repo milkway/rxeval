@@ -3,6 +3,7 @@
 [![crates.io](https://img.shields.io/crates/v/rxeval.svg)](https://crates.io/crates/rxeval)
 [![docs.rs](https://img.shields.io/docsrs/rxeval)](https://docs.rs/rxeval)
 [![license: BSD-2-Clause](https://img.shields.io/badge/license-BSD--2--Clause-blue.svg)](LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21940201.svg)](https://doi.org/10.5281/zenodo.21940201)
 
 Runs the logic inside an ODK/OpenRosa form — `relevant`, `constraint`,
 `required`, `calculate` — in Rust, with no dependencies. On a server, in a
@@ -159,7 +160,10 @@ ninth decimal.
 
 ## Citing
 
-See [`CITATION.cff`](CITATION.cff).
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21940201.svg)](https://doi.org/10.5281/zenodo.21940201)
+
+The DOI above is the concept DOI: it resolves to the latest release. See
+[`CITATION.cff`](CITATION.cff) for the full entry.
 
 ## Licence
 
