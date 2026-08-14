@@ -281,19 +281,46 @@ fn check_function(name: &str, args: &[Expr], out: &mut Vec<Finding>) {
         // [0-9]{11} accepts "abc12345678901xyz" in a web form and rejects it
         // on a tablet.
         "regex" => {
-            if let Some(Expr::Literal(pattern)) = args.get(1) {
-                let anchored = pattern.starts_with('^') && pattern.ends_with('$');
-                if !anchored {
-                    out.push((
-                        format!("regex() with the unanchored pattern {pattern:?}"),
-                        Breaks::Differently,
-                        "JavaRosa requires the whole value to match while Enketo accepts a \
-                         match anywhere in it, so the same answer passes in one and fails \
-                         in the other"
-                            .into(),
-                        Some(format!("'^{pattern}$' to mean the same thing in both")),
-                    ));
-                }
+            let Some(Expr::Literal(pattern)) = args.get(1) else {
+                // A pattern assembled from an answer cannot be read here.
+                // Saying so beats saying nothing: it is the one case where
+                // this check has no opinion.
+                out.push((
+                    "regex() with a pattern that is not written out".into(),
+                    Breaks::Differently,
+                    "the pattern is built at runtime, so whether it anchors cannot be \
+                     checked here — the two engines still differ on unanchored ones"
+                        .into(),
+                    None,
+                ));
+                return;
+            };
+            let bare = !pattern.starts_with('^') || !pattern.ends_with('$');
+            let alternation = has_top_level_alternation(pattern);
+            let fix = format!("'^(?:{pattern})$'");
+            if bare {
+                out.push((
+                    format!("regex() with the unanchored pattern {pattern:?}"),
+                    Breaks::Differently,
+                    "JavaRosa requires the whole value to match while Enketo accepts a \
+                     match anywhere in it, so the same answer passes in one and fails \
+                     in the other"
+                        .into(),
+                    Some(fix),
+                ));
+            } else if alternation {
+                // `^a|b$` reads as anchored and is not: the anchors bind to
+                // the branches either side of the bar, so the middle
+                // alternatives float free. JavaRosa anchors the lot anyway;
+                // Enketo does not, and the two part ways again.
+                out.push((
+                    format!("regex() with alternation outside the anchors: {pattern:?}"),
+                    Breaks::Differently,
+                    "the ^ and $ bind only to the first and last alternatives, so this \
+                     is anchored in JavaRosa and loose in Enketo despite looking anchored"
+                        .into(),
+                    Some(fix),
+                ));
             }
         }
         // Casing that only one engine forgives.
@@ -339,4 +366,32 @@ fn crosses_repeat(path: &str, repeats: &[String]) -> bool {
         let repeat = repeat.trim_end_matches('/');
         path.starts_with(&format!("{repeat}/")) || path == repeat
     })
+}
+
+/// Is there a `|` at the top level of this pattern — outside every group and
+/// character class?
+///
+/// It matters because alternation binds looser than anchoring: `^a|b$` is
+/// "starts with a" or "ends with b", not "is exactly a or b". A pattern
+/// written that way looks anchored to a reader and to a naive check.
+fn has_top_level_alternation(pattern: &str) -> bool {
+    let mut depth = 0usize;
+    let mut in_class = false;
+    let mut escaped = false;
+    for c in pattern.chars() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        match c {
+            '\\' => escaped = true,
+            '[' if !in_class => in_class = true,
+            ']' if in_class => in_class = false,
+            '(' if !in_class => depth += 1,
+            ')' if !in_class => depth = depth.saturating_sub(1),
+            '|' if !in_class && depth == 0 => return true,
+            _ => {}
+        }
+    }
+    false
 }

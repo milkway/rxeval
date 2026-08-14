@@ -107,14 +107,10 @@ fn an_unanchored_pattern_means_two_things() {
     let text = issues[0].describe();
     assert!(text.contains("whole value"), "{text}");
     assert!(text.contains("anywhere"), "{text}");
-    assert!(
-        issues[0]
-            .suggestion
-            .as_deref()
-            .unwrap()
-            .contains("^[0-9]{11}$"),
-        "{:?}",
-        issues[0]
+    // grouped, so the anchors keep holding if the pattern later grows a bar
+    assert_eq!(
+        issues[0].suggestion.as_deref().unwrap(),
+        "'^(?:[0-9]{11})$'"
     );
 
     // an anchored one travels, and must not be reported
@@ -177,4 +173,78 @@ fn the_psu_form() {
     for issue in &issues {
         println!("  {}", issue.describe());
     }
+}
+
+/// The rewrite this suggests has to be one that actually holds. Wrapping a
+/// pattern in bare anchors is the obvious advice and it is wrong: with
+/// alternation, `^a|b$` means "starts with a, or ends with b".
+#[test]
+fn the_suggested_rewrite_survives_alternation() {
+    let xform = form(
+        r#"<bind nodeset="/data/a" type="string"
+                 constraint="regex(., '9[0-9]{8}|[2-5][0-9]{7}')"/>"#,
+        "",
+    );
+    let issues = check_form(&xform).unwrap();
+    assert_eq!(issues.len(), 1, "{issues:#?}");
+    let fix = issues[0].suggestion.as_deref().unwrap();
+    assert!(
+        fix.contains("(?:"),
+        "the fix must group the alternation, or it changes the meaning: {fix}"
+    );
+    assert_eq!(fix, "'^(?:9[0-9]{8}|[2-5][0-9]{7})$'");
+}
+
+/// A pattern that reads as anchored and is not, because the bar binds
+/// looser than the anchors. This one used to pass unnoticed.
+#[test]
+fn anchors_that_only_look_like_anchors() {
+    let xform = form(
+        r#"<bind nodeset="/data/a" type="string" constraint="regex(., '^abc|def$')"/>"#,
+        "",
+    );
+    let issues = check_form(&xform).unwrap();
+    assert_eq!(issues.len(), 1, "{issues:#?}");
+    assert!(
+        issues[0].construct.contains("outside the anchors"),
+        "{:?}",
+        issues[0]
+    );
+    assert_eq!(
+        issues[0].suggestion.as_deref().unwrap(),
+        "'^(?:^abc|def$)$'"
+    );
+
+    // alternation safely inside a group is fine, which is what the real
+    // PSU phone rule does
+    let grouped = form(
+        r#"<bind nodeset="/data/a" type="string"
+                 constraint="regex(., '^(9[0-9]{8}|[2-5][0-9]{7})$')"/>"#,
+        "",
+    );
+    assert!(check_form(&grouped).unwrap().is_empty());
+
+    // and a bar inside a character class is not alternation at all
+    let class = form(
+        r#"<bind nodeset="/data/a" type="string" constraint="regex(., '^[a|b]+$')"/>"#,
+        "",
+    );
+    assert!(check_form(&class).unwrap().is_empty());
+}
+
+/// A pattern built at runtime cannot be read, and saying so beats silence.
+#[test]
+fn a_pattern_that_is_not_written_out() {
+    let xform = form(
+        r#"<bind nodeset="/data/a" type="string" constraint="regex(., /data/b)"/>"#,
+        "",
+    );
+    let issues = check_form(&xform).unwrap();
+    assert_eq!(issues.len(), 1, "{issues:#?}");
+    assert!(issues[0].suggestion.is_none());
+    assert!(
+        issues[0].describe().contains("built at runtime"),
+        "{:?}",
+        issues[0]
+    );
 }
