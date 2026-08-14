@@ -1,6 +1,6 @@
 Package: rxeval
 Title: Evaluate ODK/OpenRosa XForms Logic
-Version: 0.0.0.9000
+Version: 0.1.1
 Authors@R: 
     person("Andre", "Leite", , "leite@de.ufpe.br", role = c("aut", "cre"))
 Description: Check what a questionnaire own rules say about a submission,
@@ -14,3 +14,8 @@ Config/rextendr/version: 0.5.0
 SystemRequirements: Cargo (Rust's package manager), rustc >= 1.65.0, xz
 Depends: 
     R (>= 4.2)
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+URL: https://milkway.github.io/rxeval/, https://github.com/milkway/rxeval
+BugReports: https://github.com/milkway/rxeval/issues

@@ -126,7 +126,9 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "rxeval"
-version = "0.1.0"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8d30cfdccea86e8915c0840e81fb913997a31c533de8148bafbb7803138fa57"
 dependencies = [
  "regex",
 ]

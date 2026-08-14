@@ -50,8 +50,14 @@ test_that("expressions evaluate against a submission", {
 })
 
 test_that("what the engine cannot evaluate raises", {
+  # Not a plausible value: a function this engine does not have errors by
+  # name, and one it has but cannot answer says what is missing.
   expect_error(
-    eval_expression("pulldata('a','b','c','d')", submission(30, 60)),
+    eval_expression("indexed-repeat(/data/a, /data/b, 1)", submission(30, 60)),
     regexp = "not implemented"
+  )
+  expect_error(
+    eval_expression("pulldata('lotes','nome','codigo','1')", submission(30, 60)),
+    regexp = "cannot find the table"
   )
 })

@@ -20,10 +20,11 @@ path = 'document.rs'
 
 [dependencies]
 extendr-api = '*'
-# A path dependency while both live in this repo. It becomes a version
-# once rxeval is on crates.io, which is what makes this package
-# installable from anywhere.
-rxeval = { path = '../../../../rxeval' }
+# A version, not a path. This is what makes the package build anywhere —
+# on CRAN's machines, from a tarball, with no repository around it. It also
+# means `cargo vendor` can gather the sources into vendor.tar.xz, which is
+# how CRAN builds with no network at all.
+rxeval = '0.1'
 
 [profile.release]
 lto = true

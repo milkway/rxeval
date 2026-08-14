@@ -7,3 +7,7 @@ node_modules/
 # fetched with Maven for the JavaRosa side of the oracle; never committed
 lib/
 .DS_Store
+# Built by r-package/tools/vendor.sh before an R CMD build; a product of
+# Cargo.lock, not a source.
+r-package/src/rust/vendor.tar.xz
+r-package/src/rust/vendor/
