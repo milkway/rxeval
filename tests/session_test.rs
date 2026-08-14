@@ -508,7 +508,11 @@ fn a_row_that_is_not_there_is_an_error_and_not_an_invention() {
     let refused = session.set("/data/morador[3]/idade", "22").unwrap_err();
     assert!(refused.contains("morador[3]"), "{refused}");
     assert!(refused.contains("add_row"), "{refused}");
-    assert!(!session.instance_xml().contains("morador["), "{}", session.instance_xml());
+    assert!(
+        !session.instance_xml().contains("morador["),
+        "{}",
+        session.instance_xml()
+    );
 
     // and with the rows there, it lands where it was asked to
     session.add_row("/data/morador").unwrap();
