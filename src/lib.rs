@@ -29,12 +29,14 @@ pub mod functions;
 pub mod parser;
 pub mod portability;
 pub mod rules;
+pub mod session;
 pub mod tree;
 
 pub use eval::{evaluate, Context, Environment, Fixed, Value};
 pub use parser::{parse, Expr};
 pub use portability::{check_form, Breaks, Issue};
 pub use rules::{Binding, Clock, Form, Rules, Violation, ViolationKind};
+pub use session::{Outcome, Session};
 pub use tree::{Instance, NodeId};
 
 /// Parse and evaluate one expression against an instance, with `.` at the

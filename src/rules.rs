@@ -564,6 +564,103 @@ impl Form {
             .collect()
     }
 
+    /// Run the form's calculations and report what they produce.
+    ///
+    /// Nothing is written to `submission`: the values come back by path and
+    /// the caller decides. Calculations that feed each other still see each
+    /// other, because the intermediate writes happen in this function's own
+    /// copy of the model — in the dependency order [`Rules`] worked out
+    /// when the form was parsed.
+    ///
+    /// The second half of the pair is expressions that could not be
+    /// evaluated. Those are form bugs rather than answer problems, which is
+    /// why they travel separately: nobody filling in a form can fix one.
+    pub fn calculations(
+        &self,
+        submission: &Instance,
+        clock: &Clock,
+    ) -> (BTreeMap<String, String>, Vec<(String, String)>) {
+        let mut model = self.model_of(submission);
+        let mut computed = BTreeMap::new();
+        let mut failed = Vec::new();
+
+        for index in self.rules.calculation_order.clone() {
+            let binding = &self.rules.bindings[index];
+            let Some(calculate) = binding.calculate.clone() else {
+                continue;
+            };
+            let path = binding.path.clone();
+            let nodes = {
+                let env = FormEnvironment {
+                    secondary: &self.secondary,
+                    form: self,
+                    model: &model,
+                    clock: clock.clone(),
+                };
+                self.rules.nodes_for(&path, &model, &env)
+            };
+            for node in nodes {
+                let result = {
+                    let env = FormEnvironment {
+                        secondary: &self.secondary,
+                        form: self,
+                        model: &model,
+                        clock: clock.clone(),
+                    };
+                    evaluate(&calculate, &model, Context::at(node), &env)
+                        .map(|value| value.to_string_value(&model))
+                };
+                match result {
+                    Ok(text) => {
+                        model.node_mut(node).value = text.clone();
+                        let where_ = model.path_of(node);
+                        let where_ = where_
+                            .strip_prefix(MODEL_ROOT_PATH)
+                            .unwrap_or(&where_)
+                            .to_string();
+                        computed.insert(where_, text);
+                    }
+                    Err(why) => failed.push((path.clone(), why)),
+                }
+            }
+        }
+        (computed, failed)
+    }
+
+    /// Which nodes the form asks about, by path.
+    ///
+    /// A path missing from the map has no relevance expression of its own
+    /// and no irrelevant ancestor: it is always asked.
+    pub fn relevance(
+        &self,
+        submission: &Instance,
+        clock: &Clock,
+    ) -> (BTreeMap<String, bool>, Vec<Violation>) {
+        let model = self.model_of(submission);
+        let env = FormEnvironment {
+            secondary: &self.secondary,
+            form: self,
+            model: &model,
+            clock: clock.clone(),
+        };
+        let mut problems = Vec::new();
+        let by_node = self.rules.relevance(&model, &env, &mut problems);
+        let mut by_path = BTreeMap::new();
+        for (node, shown) in by_node {
+            let path = model.path_of(node);
+            let path = path.strip_prefix(MODEL_ROOT_PATH).unwrap_or(&path);
+            by_path.insert(path.to_string(), shown);
+        }
+        for problem in &mut problems {
+            problem.node_path = problem
+                .node_path
+                .strip_prefix(MODEL_ROOT_PATH)
+                .unwrap_or(&problem.node_path)
+                .to_string();
+        }
+        (by_path, problems)
+    }
+
     /// The submission and the form's lookup tables in one document, which is
     /// how an XForms model is actually shaped — and what a predicate needs
     /// in order to filter a table by an answer.

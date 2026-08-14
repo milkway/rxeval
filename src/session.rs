@@ -1,0 +1,291 @@
+//! A form being filled in.
+//!
+//! [`Rules`] answers questions about a finished submission: is this valid,
+//! what does it calculate to, which nodes were relevant. That is the right
+//! shape for a server checking what arrived, and the wrong shape for a
+//! screen someone is typing into, where the same questions have to be
+//! answered again after every keystroke and the answers have to be applied
+//! rather than reported.
+//!
+//! A [`Session`] holds the instance, applies calculations in dependency
+//! order, and reports what changed. It is deliberately the same engine:
+//! a form that behaves one way while being filled and another way when it
+//! arrives is worse than one that is wrong in a single consistent way,
+//! because only the first kind produces data nobody can explain.
+//!
+//! ## What it does not do
+//!
+//! It does not decide what a question looks like, what order questions are
+//! asked in, or what a language is called. Those are the form *body*'s
+//! business and a renderer's; this module knows the model — paths, values,
+//! and the expressions binding them.
+
+use std::collections::{BTreeMap, BTreeSet};
+
+use crate::eval::{evaluate, Context, Value};
+use crate::rules::{Clock, Form, Violation};
+use crate::tree::{Instance, NodeId};
+
+/// A form and the answers so far.
+pub struct Session {
+    form: Form,
+    instance: Instance,
+    clock: Clock,
+}
+
+/// What the engine says about the form as it currently stands.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Outcome {
+    /// Paths whose value the form computed, and what it computed.
+    ///
+    /// Only paths that *changed* appear: a renderer redrawing every
+    /// calculated field on every keystroke would fight the cursor.
+    pub calculated: BTreeMap<String, String>,
+    /// Paths that are relevant, and paths that are not. A path missing
+    /// from this map has no relevance expression and is always asked.
+    pub relevant: BTreeMap<String, bool>,
+    /// Paths that must be answered and are not, given current relevance.
+    pub missing: Vec<String>,
+    /// Answers the form's own rules reject, with the message to show.
+    pub invalid: Vec<(String, String)>,
+    /// Expressions that could not be evaluated at all. These are form bugs,
+    /// not answer problems, and they are kept separate for that reason: an
+    /// enumerator can fix an answer and can do nothing about a broken
+    /// `relevant`.
+    pub failed: Vec<(String, String)>,
+}
+
+impl Session {
+    /// Start filling in a form, from the XForm the server serves.
+    pub fn new(xform: &str, clock: Clock) -> Result<Self, String> {
+        let form = Form::parse(xform)?;
+        let instance = blank_instance(xform)?;
+        Ok(Session {
+            form,
+            instance,
+            clock,
+        })
+    }
+
+    /// Resume a partly-filled form.
+    pub fn resume(xform: &str, instance_xml: &str, clock: Clock) -> Result<Self, String> {
+        let form = Form::parse(xform)?;
+        let instance =
+            Instance::from_xml(instance_xml).map_err(|e| format!("saved instance: {e}"))?;
+        Ok(Session {
+            form,
+            instance,
+            clock,
+        })
+    }
+
+    /// Answer a question.
+    ///
+    /// The path is created if the blank instance did not have it — a form
+    /// whose template omits a node still has to be able to hold its answer.
+    pub fn set(&mut self, path: &str, value: &str) -> Result<(), String> {
+        match self.node_at(path) {
+            Some(node) => {
+                self.instance.node_mut(node).value = value.to_string();
+                Ok(())
+            }
+            None => self.create_at(path, value),
+        }
+    }
+
+    /// The current answer, or the empty string for an unanswered question.
+    pub fn get(&self, path: &str) -> String {
+        self.node_at(path)
+            .map(|node| self.instance.string_value(node))
+            .unwrap_or_default()
+    }
+
+    /// Run the form's logic and apply what it derives.
+    ///
+    /// Calculations run first, in dependency order, and their results are
+    /// written into the instance — that is the difference between this and
+    /// checking a finished submission, which only reports the disagreement.
+    pub fn recompute(&mut self) -> Outcome {
+        let mut outcome = Outcome::default();
+
+        let (computed, failed) = self.form.calculations(&self.instance, &self.clock);
+        outcome.failed = failed;
+        for (path, value) in computed {
+            if self.get(&path) != value {
+                let _ = self.set(&path, &value);
+                outcome.calculated.insert(path, value);
+            }
+        }
+
+        let (relevance, problems) = self.form.relevance(&self.instance, &self.clock);
+        outcome.relevant = relevance;
+        for problem in problems {
+            outcome
+                .failed
+                .push((problem.node_path.clone(), problem.describe()));
+        }
+
+        // An unanswered question nobody was asked is the normal state of
+        // most of a form; saying so on every keystroke is noise.
+        let hidden: BTreeSet<String> = outcome
+            .relevant
+            .iter()
+            .filter(|(_, shown)| !**shown)
+            .map(|(path, _)| path.clone())
+            .collect();
+
+        for violation in self.form.check(&self.instance, self.clock.clone()) {
+            let path = violation.node_path.clone();
+            if hidden.contains(&path) {
+                continue;
+            }
+            use crate::rules::ViolationKind::*;
+            match &violation.kind {
+                Required => outcome.missing.push(path),
+                Constraint => outcome.invalid.push((
+                    path,
+                    violation
+                        .message
+                        .clone()
+                        .unwrap_or_else(|| "this answer is not allowed".into()),
+                )),
+                Failed(why) => outcome.failed.push((path, why.clone())),
+                // The calculations above just ran; a disagreement with them
+                // would be the failure recorded there, not a finding here.
+                Calculation { .. } => {}
+            }
+        }
+        outcome
+    }
+
+    /// The instance as it would be submitted.
+    pub fn instance_xml(&self) -> String {
+        let mut out = String::from("<?xml version='1.0' ?>");
+        if let Some(root) = self.instance.root() {
+            write_element(&self.instance, root, &mut out);
+        }
+        out
+    }
+
+    /// Every violation, for the moment someone presses send. Unlike
+    /// [`Self::recompute`], this reports irrelevant nodes too — a value
+    /// sitting in a question nobody was asked is worth knowing about
+    /// before it is sent, not after.
+    pub fn check_all(&self) -> Vec<Violation> {
+        self.form.check(&self.instance, self.clock.clone())
+    }
+
+    fn node_at(&self, path: &str) -> Option<NodeId> {
+        let expr = crate::parser::parse(path).ok()?;
+        let root = self.instance.root()?;
+        let env = crate::eval::Fixed {
+            today: self.clock.today.clone(),
+            now: self.clock.now.clone(),
+        };
+        match evaluate(&expr, &self.instance, Context::at(root), &env) {
+            Ok(Value::NodeSet(nodes)) => nodes.first().copied(),
+            _ => None,
+        }
+    }
+
+    /// Create a path the template did not have, one element at a time.
+    fn create_at(&mut self, path: &str, value: &str) -> Result<(), String> {
+        let mut parts: Vec<&str> = path.split('/').filter(|p| !p.is_empty()).collect();
+        if parts.is_empty() {
+            return Err(format!("'{path}' names nothing"));
+        }
+        let leaf = parts.pop().expect("checked above");
+        let mut here = self
+            .instance
+            .root()
+            .ok_or_else(|| "the instance has no root".to_string())?;
+        // The first part is the root itself.
+        if !parts.is_empty() && self.instance.node(here).name == parts[0] {
+            parts.remove(0);
+        }
+        for part in parts {
+            let existing = self
+                .instance
+                .children(here)
+                .into_iter()
+                .find(|child| self.instance.node(*child).name == part);
+            here = match existing {
+                Some(child) => child,
+                None => {
+                    let child = self.instance.create_element(part, "");
+                    self.instance.append_child(here, child);
+                    child
+                }
+            };
+        }
+        let leaf_node = self.instance.create_element(leaf, value);
+        self.instance.append_child(here, leaf_node);
+        self.instance.reindex();
+        Ok(())
+    }
+}
+
+/// The blank instance an XForm carries as its template.
+fn blank_instance(xform: &str) -> Result<Instance, String> {
+    let document = Instance::from_xml(xform).map_err(|e| format!("XForm XML: {e}"))?;
+    let root = document.root().ok_or("the XForm has no root element")?;
+    // The first <instance> under <model>: the primary one, by definition.
+    let primary = document
+        .descendants(root)
+        .into_iter()
+        .find(|node| document.node(*node).name == "instance")
+        .ok_or("the XForm has no primary instance")?;
+    let template = document
+        .children(primary)
+        .into_iter()
+        .next()
+        .ok_or("the XForm's primary instance is empty")?;
+    let mut instance = Instance::new();
+    let copied = instance.adopt(&document, template);
+    instance.set_root(copied);
+    instance.reindex();
+    Ok(instance)
+}
+
+fn write_element(instance: &Instance, node: NodeId, out: &mut String) {
+    let name = &instance.node(node).name;
+    out.push('<');
+    out.push_str(name);
+    for attribute in instance.attributes(node) {
+        out.push(' ');
+        out.push_str(&instance.node(attribute).name);
+        out.push_str("=\"");
+        escape_into(&instance.node(attribute).value, out);
+        out.push('"');
+    }
+    let children = instance.children(node);
+    if children.is_empty() {
+        let value = &instance.node(node).value;
+        if value.is_empty() {
+            out.push_str("/>");
+            return;
+        }
+        out.push('>');
+        escape_into(value, out);
+    } else {
+        out.push('>');
+        for child in children {
+            write_element(instance, child, out);
+        }
+    }
+    out.push_str("</");
+    out.push_str(name);
+    out.push('>');
+}
+
+fn escape_into(text: &str, out: &mut String) {
+    for c in text.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            _ => out.push(c),
+        }
+    }
+}
