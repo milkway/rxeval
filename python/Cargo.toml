@@ -6,7 +6,7 @@
 
 [package]
 name = "rxeval-python"
-version = "0.1.0"
+version = "0.1.1"
 description = "Python bindings for rxeval: run the logic inside an ODK/OpenRosa XForm"
 edition = "2021"
 license = "BSD-2-Clause"

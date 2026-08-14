@@ -113,8 +113,18 @@ introducing a second implementation to drift from the first.
 
 - **Native**, for a server checking what arrived.
 - **WebAssembly**, for a browser filling a form offline.
-- **R**, through [extendr](https://extendr.github.io/), for checking a
-  questionnaire from an analysis script before anyone goes to the field.
+- **R**, through [extendr](https://extendr.github.io/), and **Python**,
+  through [PyO3](https://pyo3.rs/) — for checking a questionnaire from an
+  analysis script, or from the script that built it. pyxform is Python, so
+  that is where a form is usually written and where the check belongs.
+
+```sh
+pip install rxeval        # python/
+```
+```r
+# r-package/
+issues <- rxeval::form_portability("survey.xml")
+```
 
 ## Install
 
