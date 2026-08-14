@@ -1,0 +1,63 @@
+# Wheels for the platforms people actually install on.
+#
+# Building here produces one wheel for this laptop; PyPI needs Linux,
+# macOS on both architectures, and Windows. abi3 means one wheel per
+# platform serves every Python from 3.8 up, so the matrix is platforms and
+# not platforms × interpreter versions.
+#
+# Publishing is manual on purpose: a tag should not be able to push to PyPI
+# on its own. Run the workflow, download the artefact, look at it, upload it.
+name: python wheels
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wheels:
+    name: ${{ matrix.platform.runner }} · ${{ matrix.platform.target }}
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - { runner: ubuntu-latest,  target: x86_64 }
+          - { runner: ubuntu-latest,  target: aarch64 }
+          - { runner: macos-latest,   target: aarch64 }
+          - { runner: macos-13,       target: x86_64 }
+          - { runner: windows-latest, target: x64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: build
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist --manifest-path python/Cargo.toml
+          # manylinux for the widest reach; the engine has no C dependencies
+          # so the oldest image works and asks nothing of the host.
+          manylinux: auto
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.platform.runner }}-${{ matrix.platform.target }}
+          path: dist
+
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: build source distribution
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist --manifest-path python/Cargo.toml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: dist

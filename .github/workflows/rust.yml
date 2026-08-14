@@ -1,0 +1,26 @@
+# The tests, on every push. Nothing here needs the network or a JVM: the
+# oracle answers are committed, which is the point of committing them.
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      # The engine has to keep building without its one optional dependency:
+      # that build is what the browser ships.
+      - run: cargo test --no-default-features
