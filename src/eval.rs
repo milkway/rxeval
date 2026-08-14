@@ -193,11 +193,16 @@ pub fn evaluate(
             predicates,
             steps,
         } => {
-            let value = evaluate(base, instance, context, env)?;
             // `instance('x')/...` steps into another document, so the walk
             // has to continue there rather than in the primary instance.
-            let (target, mut nodes) = match (&**base, &value) {
-                (Expr::Function { name, args }, _) if name == "instance" => {
+            //
+            // Checked before evaluating the base: instance() is not a
+            // function that returns a value, it names a document, and
+            // handing it to the function table would fail on the one form
+            // shape that matters most — every cascading select is written
+            // this way.
+            let (target, mut nodes) = match &**base {
+                Expr::Function { name, args } if name == "instance" => {
                     let id = match args.first() {
                         Some(Expr::Literal(s)) => s.clone(),
                         Some(other) => {
@@ -205,19 +210,34 @@ pub fn evaluate(
                         }
                         None => return Err("instance() needs an id".into()),
                     };
-                    let secondary = env.secondary_instance(&id).ok_or_else(|| {
-                        format!(
-                            "instance('{id}') is not loaded — the form expects a \
-                             secondary instance the evaluator was not given"
-                        )
-                    })?;
-                    let root = match secondary.root() {
-                        Some(root) => root,
-                        None => return Ok(Value::NodeSet(Vec::new())),
-                    };
-                    (secondary, vec![root])
+                    // In the same document first. A form's lookup tables sit
+                    // beside its primary instance inside one model, and that
+                    // is what lets a predicate like
+                    // `item[name = /data/linha]` reach back out to the
+                    // answer it filters on. Resolving into a separate
+                    // document strands that path — and mixes node ids from
+                    // two arenas, which nothing here would catch.
+                    match instance.instance_named(&id) {
+                        Some(root) => (instance, vec![root]),
+                        None => {
+                            let secondary = env.secondary_instance(&id).ok_or_else(|| {
+                                format!(
+                                    "instance('{id}') is not loaded — the form expects a \
+                                     secondary instance the evaluator was not given"
+                                )
+                            })?;
+                            let root = match secondary.root() {
+                                Some(root) => root,
+                                None => return Ok(Value::NodeSet(Vec::new())),
+                            };
+                            (secondary, vec![root])
+                        }
+                    }
                 }
-                _ => (instance, node_set(value, "a path base")?),
+                _ => {
+                    let value = evaluate(base, instance, context, env)?;
+                    (instance, node_set(value, "a path base")?)
+                }
             };
             nodes = apply_predicates(nodes, predicates, target, env)?;
             for step in steps {

@@ -503,3 +503,162 @@ pub fn from_xform(xml: &str) -> Result<Rules, String> {
     }
     Rules::new(bindings)
 }
+
+// ---------------------------------------------------------------------------
+// A form, ready to check submissions against
+// ---------------------------------------------------------------------------
+
+/// The element this crate wraps a submission in while checking it. Named
+/// after the XForms element it stands for, and stripped from reported paths.
+const MODEL_ROOT: &str = "model";
+const MODEL_ROOT_PATH: &str = "/model";
+
+/// An XForm's rules together with the lookup tables it reads.
+///
+/// Cascading selects are written as `instance('lotes')/root/item[...]`, and
+/// those tables live inside the XForm itself. Without them every such
+/// expression fails, which on a real questionnaire means most of them.
+pub struct Form {
+    pub rules: Rules,
+    secondary: BTreeMap<String, Instance>,
+}
+
+impl Form {
+    pub fn parse(xform: &str) -> Result<Self, String> {
+        Ok(Form {
+            rules: from_xform(xform)?,
+            secondary: secondary_instances(xform)?,
+        })
+    }
+
+    /// Check a submission. `clock` supplies `today()` and `now()`.
+    pub fn check(&self, submission: &Instance, clock: Clock) -> Vec<Violation> {
+        let model = self.model_of(submission);
+        let env = FormEnvironment {
+            secondary: &self.secondary,
+            clock,
+        };
+        self.rules
+            .check(&model, &env)
+            .into_iter()
+            .map(|mut violation| {
+                // Paths are reported as the form writes them, without the
+                // wrapper this check builds around the submission.
+                violation.node_path = violation
+                    .node_path
+                    .strip_prefix(MODEL_ROOT_PATH)
+                    .unwrap_or(&violation.node_path)
+                    .to_string();
+                violation
+            })
+            .collect()
+    }
+
+    /// The submission and the form's lookup tables in one document, which is
+    /// how an XForms model is actually shaped — and what a predicate needs
+    /// in order to filter a table by an answer.
+    fn model_of(&self, submission: &Instance) -> Instance {
+        let mut model = Instance::new();
+        let root = model.create_element(MODEL_ROOT, "");
+        model.set_root(root);
+        if let Some(primary) = submission.root() {
+            let copied = model.adopt(submission, primary);
+            model.append_child(root, copied);
+        }
+        for (id, table) in &self.secondary {
+            let Some(table_root) = table.root() else {
+                continue;
+            };
+            let _ = id;
+            let copied = model.adopt(table, table_root);
+            model.append_child(root, copied);
+        }
+        model.reindex();
+        model
+    }
+
+    pub fn secondary_instance_ids(&self) -> Vec<&str> {
+        self.secondary.keys().map(String::as_str).collect()
+    }
+}
+
+/// What `today()` and `now()` answer.
+///
+/// Passed in rather than read from the system clock: a constraint like
+/// `. <= today()` has to be judged against the day the interview happened,
+/// not the day someone re-ran the check. Otherwise a submission that was
+/// valid on collection starts failing later, and the report changes without
+/// the data changing.
+#[derive(Debug, Clone)]
+pub struct Clock {
+    pub today: String,
+    pub now: String,
+}
+
+struct FormEnvironment<'a> {
+    secondary: &'a BTreeMap<String, Instance>,
+    clock: Clock,
+}
+
+impl Environment for FormEnvironment<'_> {
+    fn secondary_instance(&self, id: &str) -> Option<&Instance> {
+        self.secondary.get(id)
+    }
+    fn today(&self) -> String {
+        self.clock.today.clone()
+    }
+    fn now(&self) -> String {
+        self.clock.now.clone()
+    }
+}
+
+/// The lookup tables declared inside an XForm.
+///
+/// A secondary instance is an `<instance>` carrying an `id`; the primary one
+/// has no id of its own — its child element does. Reading them out means
+/// `instance('lotes')` resolves without anyone loading anything.
+pub fn secondary_instances(xform: &str) -> Result<BTreeMap<String, Instance>, String> {
+    let document = Instance::from_xml(xform).map_err(|e| format!("XForm XML: {e}"))?;
+    let Some(root) = document.root() else {
+        return Ok(BTreeMap::new());
+    };
+    let mut out = BTreeMap::new();
+    let mut nodes = vec![root];
+    nodes.extend(document.descendants(root));
+    for node in nodes {
+        if document.node(node).name != "instance" {
+            continue;
+        }
+        let Some(id) = document
+            .attributes(node)
+            .into_iter()
+            .find(|a| document.node(*a).name == "id")
+            .map(|a| document.node(a).value.clone())
+        else {
+            continue;
+        };
+        // The wrapper comes along: `instance('x')/root/item` steps from the
+        // <instance> element into the <root> it contains.
+        out.insert(id, subtree(&document, node));
+    }
+    Ok(out)
+}
+
+fn subtree(source: &Instance, from: NodeId) -> Instance {
+    fn copy(source: &Instance, node: NodeId, target: &mut Instance) -> NodeId {
+        let created = target.create_element(&source.node(node).name, &source.node(node).value);
+        for attribute in source.attributes(node) {
+            let attr = source.node(attribute);
+            target.set_attribute(created, &attr.name, &attr.value);
+        }
+        for child in source.children(node) {
+            let copied = copy(source, child, target);
+            target.append_child(created, copied);
+        }
+        created
+    }
+    let mut target = Instance::new();
+    let root = copy(source, from, &mut target);
+    target.set_root(root);
+    target
+}

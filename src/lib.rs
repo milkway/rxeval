@@ -32,7 +32,7 @@ pub mod tree;
 
 pub use eval::{evaluate, Context, Environment, Fixed, Value};
 pub use parser::{parse, Expr};
-pub use rules::{Binding, Rules, Violation, ViolationKind};
+pub use rules::{Binding, Clock, Form, Rules, Violation, ViolationKind};
 pub use tree::{Instance, NodeId};
 
 /// Parse and evaluate one expression against an instance, with `.` at the

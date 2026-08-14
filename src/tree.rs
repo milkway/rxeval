@@ -353,3 +353,45 @@ mod tests {
         assert!(Instance::from_xml("no tags here").is_err());
     }
 }
+
+impl Instance {
+    /// The `<instance id="…">` element of a lookup table in this document.
+    ///
+    /// The element itself, not its content: forms write
+    /// `instance('lotes')/root/item`, where `root` is the element wrapping
+    /// the items. Returning the content instead makes that next step look
+    /// for a `root` inside `root`, which matches nothing and reads as an
+    /// empty table rather than as a mistake.
+    pub fn instance_named(&self, id: &str) -> Option<NodeId> {
+        let root = self.root()?;
+        let mut candidates = vec![root];
+        candidates.extend(self.descendants(root));
+        for node in candidates {
+            if self.node(node).name != "instance" {
+                continue;
+            }
+            let named = self
+                .attributes(node)
+                .into_iter()
+                .any(|a| self.node(a).name == "id" && self.node(a).value == id);
+            if named {
+                return Some(node);
+            }
+        }
+        None
+    }
+
+    /// Copy a subtree of `source` into this instance, returning its new id.
+    pub fn adopt(&mut self, source: &Instance, node: NodeId) -> NodeId {
+        let created = self.create_element(&source.node(node).name, &source.node(node).value);
+        for attribute in source.attributes(node) {
+            let attr = source.node(attribute);
+            self.set_attribute(created, &attr.name, &attr.value);
+        }
+        for child in source.children(node) {
+            let copied = self.adopt(source, child);
+            self.append_child(created, copied);
+        }
+        created
+    }
+}
