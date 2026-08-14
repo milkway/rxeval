@@ -158,6 +158,14 @@ impl Session {
         outcome
     }
 
+    /// The choices a question offers right now.
+    ///
+    /// `None` when the question's choices are written out in the form and
+    /// therefore never change; the renderer already has those.
+    pub fn choices(&self, path: &str) -> Option<Vec<(String, String)>> {
+        self.form.choices(&self.instance, path)
+    }
+
     /// The instance as it would be submitted.
     pub fn instance_xml(&self) -> String {
         let mut out = String::from("<?xml version='1.0' ?>");

@@ -772,6 +772,79 @@ impl Form {
         None
     }
 
+    /// The choices a question offers, given the answers so far.
+    ///
+    /// A form asks for the *point* on the *lote* already chosen, and the
+    /// list of points is filtered by that answer. Which means the list is
+    /// not a property of the question — it is a function of the instance,
+    /// and it can only be computed by evaluating the same expression the
+    /// device evaluates. A renderer that filtered the list itself would be
+    /// a second implementation of the form's logic; one that skipped the
+    /// filter entirely would offer points in the wrong lote.
+    ///
+    /// Returns `None` for a question with no itemset — its choices are
+    /// written out in the form and never change.
+    pub fn choices(
+        &self,
+        submission: &Instance,
+        question_path: &str,
+    ) -> Option<Vec<(String, String)>> {
+        let model = self.model_of(submission);
+        let body = self.body.as_ref()?;
+        let control = find_control(body, question_path)?;
+        let itemset = body
+            .children(control)
+            .into_iter()
+            .find(|c| body.node(*c).name == "itemset")?;
+        let nodeset = attribute_of(body, itemset, "nodeset")?;
+        let value_ref = body
+            .children(itemset)
+            .into_iter()
+            .find(|c| body.node(*c).name == "value")
+            .and_then(|c| attribute_of(body, c, "ref"))
+            .unwrap_or_else(|| "name".to_string());
+        let label_ref = body
+            .children(itemset)
+            .into_iter()
+            .find(|c| body.node(*c).name == "label")
+            .and_then(|c| attribute_of(body, c, "ref"));
+
+        let expr = crate::parser::parse(&nodeset).ok()?;
+        let root = model.root()?;
+        let env = FormEnvironment {
+            secondary: &self.secondary,
+            form: self,
+            model: &model,
+            clock: Clock {
+                today: String::new(),
+                now: String::new(),
+            },
+        };
+        let items = match evaluate(&expr, &model, Context::at(root), &env) {
+            Ok(Value::NodeSet(nodes)) => nodes,
+            _ => return Some(Vec::new()),
+        };
+
+        let mut out = Vec::new();
+        for item in items {
+            let value = model
+                .children(item)
+                .into_iter()
+                .find(|c| model.node(*c).name == value_ref)
+                .map(|c| model.string_value(c))
+                .unwrap_or_default();
+            if value.trim().is_empty() {
+                continue;
+            }
+            let label = match &label_ref {
+                Some(reference) => self.resolve_reference(reference, &model, item),
+                None => value.clone(),
+            };
+            out.push((value, label));
+        }
+        Some(out)
+    }
+
     /// A `<label ref="…"/>` on an item written out in the body.
     fn resolve_label(
         &self,
