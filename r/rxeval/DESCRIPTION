@@ -1,0 +1,16 @@
+Package: rxeval
+Title: Evaluate ODK/OpenRosa XForms Logic
+Version: 0.0.0.9000
+Authors@R: 
+    person("Andre", "Leite", , "leite@de.ufpe.br", role = c("aut", "cre"))
+Description: Check what a questionnaire own rules say about a submission,
+    and which of its expressions will behave differently on a tablet than
+    in a browser. Wraps the rxeval Rust crate.
+License: BSD_2_clause + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 8.0.0
+Config/rextendr/version: 0.5.0
+SystemRequirements: Cargo (Rust's package manager), rustc >= 1.65.0, xz
+Depends: 
+    R (>= 4.2)
