@@ -2,15 +2,20 @@
 name = "rxeval"
 version = "0.1.0"
 description = "Evaluate ODK/OpenRosa XForms logic: XPath with the OpenRosa extensions, over a form instance"
-edition.workspace = true
-license.workspace = true
-repository.workspace = true
-authors.workspace = true
+edition = "2021"
+license = "BSD-2-Clause"
+repository = "https://github.com/milkway/rxeval"
+homepage = "https://milkway.github.io/rxeval/"
+documentation = "https://docs.rs/rxeval"
+authors = ["André Leite <leite@de.ufpe.br>"]
 keywords = ["odk", "xforms", "xpath", "openrosa", "survey"]
 categories = ["parser-implementations"]
 readme = "README.md"
 # The edition and the let-else / is_some_and this crate uses.
 rust-version = "1.75"
+# Not part of the published crate: the site is a site, and the R package and
+# the oracle generators are tools that live beside the engine, not in it.
+exclude = ["docs/", "r-package/", "scripts/"]
 
 [features]
 default = ["regex"]

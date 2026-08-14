@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rxeval — run the logic inside an ODK form, in Rust</title>
+<meta name="description" content="rxeval evaluates XForms logic — relevant, constraint, required, calculate — with no dependencies, on a server, in a browser through WebAssembly, and in R. Every rule decided by asking both JavaRosa and Enketo and reading the two answers.">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
+<meta property="og:title" content="rxeval — run the logic inside an ODK form">
+<meta property="og:description" content="Two engines run ODK forms and neither is a superset of the other. rxeval was measured against both, and says which of your rules will not travel.">
+<link rel="alternate" hreflang="en" href="https://milkway.github.io/rxeval/en/index.html">
+<link rel="alternate" hreflang="pt" href="https://milkway.github.io/rxeval/pt/index.html">
+<link rel="alternate" hreflang="x-default" href="https://milkway.github.io/rxeval/en/index.html">
+<style>
+  /* A sibling of rxform, not a twin: same system, the blue of the two
+     reference engines rather than the amber of the spreadsheet. */
+  :root { --accent: var(--color-blue); }
+  @media (prefers-color-scheme: dark) { :root { --accent: #82b3e8; } }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ======================= nav ======================= -->
+<header class="border-b border-(--rule) bg-(--bg)/80 backdrop-blur-sm sticky top-0 z-40">
+  <nav class="mx-auto flex max-w-6xl items-baseline gap-6 px-5 py-3.5">
+    <a href="#" class="font-display text-xl font-bold tracking-tight">rxeval</a>
+    <span class="font-mono text-xs text-(--muted) hidden sm:inline">v0.1</span>
+    <span class="flex-1"></span>
+    <a class="font-mono text-sm text-(--muted) hover:text-(--accent) transition-colors" href="#ecosystem">ecosystem</a>
+    <a class="font-mono text-sm text-(--muted) hover:text-(--accent) transition-colors" href="#portability">portability</a>
+    <a class="font-mono text-sm text-(--muted) hover:text-(--accent) transition-colors hidden sm:inline" href="#session">filling</a>
+    <a class="font-mono text-sm text-(--muted) hover:text-(--accent) transition-colors" href="#install">install</a>
+    <a class="font-mono text-sm text-(--muted) hover:text-(--accent) transition-colors hidden sm:inline" href="https://docs.rs/rxeval">docs.rs</a>
+    <a class="font-mono text-sm text-(--muted) hover:text-(--accent) transition-colors" href="https://github.com/milkway/rxeval">github</a>
+    <span class="flex items-baseline gap-2 border-l border-(--rule) pl-4"><a class="font-mono text-xs uppercase text-(--accent) transition-colors" href="../en/index.html">en</a><a class="font-mono text-xs uppercase text-(--muted) hover:text-(--accent) transition-colors" href="../pt/index.html">pt</a></span>
+  </nav>
+</header>
+
+<!-- ======================= hero ======================= -->
+<section class="relative overflow-hidden">
+  <div class="mx-auto max-w-6xl px-5 pt-20 pb-16 lg:pt-28 lg:pb-24">
+    <p class="rise-1 font-mono text-[13px] tracking-[0.18em] uppercase text-(--accent)">relevant &nbsp;·&nbsp; constraint &nbsp;·&nbsp; required &nbsp;·&nbsp; calculate</p>
+    <h1 class="rise-2 font-display mt-4 max-w-3xl text-5xl font-semibold leading-[1.04] tracking-tight sm:text-6xl lg:text-7xl">
+      A form is a<br><span class="text-(--accent)">small program</span>.
+    </h1>
+    <p class="rise-3 mt-6 max-w-2xl text-lg leading-relaxed text-(--muted)">
+      Until something runs it, a server can only take whatever a device sends and
+      hope the device was right. <strong class="text-(--text) font-semibold">rxeval</strong>
+      is that something: XPath 1.0 with the OpenRosa extensions, evaluated over a
+      form instance, with no dependencies — on a server, in a browser through
+      WebAssembly, and in R.
+    </p>
+
+    <div class="rise-4 mt-9 flex flex-wrap items-center gap-3">
+      <a href="#install" class="rounded-md border border-(--rule) bg-(--surface) px-4 py-2.5 font-mono text-sm hover:border-(--accent) transition-colors">install</a>
+      <a href="https://github.com/milkway/rxform" class="rounded-md border border-transparent px-4 py-2.5 font-mono text-sm text-(--muted) hover:text-(--accent) transition-colors">↗ rxform, which writes the forms this runs</a>
+    </div>
+
+    <!-- the thing itself -->
+    <div class="rise-5 mt-12 overflow-hidden rounded-lg border border-(--rule) bg-(--color-term) shadow-[0_18px_50px_-24px_rgba(27,42,65,0.5)]">
+      <div class="border-b border-white/10 px-4 py-2 font-mono text-xs text-(--color-termtext)/50">an interview, mid-answer</div>
+      <pre class="overflow-x-auto px-5 py-4 font-mono text-[13px] leading-relaxed text-(--color-termtext)"><code>session.set("/data/age", "9")?;
+let outcome = session.recompute();
+
+<span class="text-(--color-termtext)/60">// what the form now says, and only what changed</span>
+outcome.calculated   <span class="text-sky-300">{"/data/adult": "no", "/data/years_left": "9"}</span>
+outcome.relevant     <span class="text-sky-300">{"/data/guardian": true}</span>
+outcome.missing      <span class="text-amber-300">["/data/guardian"]</span>
+outcome.invalid      <span class="text-emerald-300">[]</span></code></pre>
+    </div>
+    <p class="mt-3 font-mono text-xs text-(--muted)">A guardian is required only for a child, so it becomes missing the moment the age says nine — and stops being missing the moment it says forty.</p>
+  </div>
+</section>
+
+<!-- ======================= the ecosystem problem ======================= -->
+<section id="ecosystem" class="rule-y bg-(--surface)/60">
+  <div class="mx-auto max-w-6xl px-5 py-20">
+    <p class="font-mono text-[13px] tracking-[0.15em] uppercase text-(--accent)">the problem this crate exists for</p>
+    <h2 class="font-display mt-3 max-w-3xl text-4xl font-semibold tracking-tight">There is no single ODK language.</h2>
+    <p class="mt-5 max-w-3xl text-lg leading-relaxed text-(--muted)">
+      ODK forms are evaluated by two implementations: <strong class="text-(--text)">JavaRosa</strong>,
+      inside ODK&nbsp;Collect and KoboCollect, and <strong class="text-(--text)">Enketo</strong>'s
+      <code class="font-mono text-[0.9em]">openrosa-xpath-evaluator</code>, inside web forms.
+      Neither is a superset of the other, and the gaps do not announce themselves:
+      an expression Collect cannot evaluate usually yields <em>nothing</em> rather
+      than an error. The form fills in, the interview finishes, and a column comes
+      back empty.
+    </p>
+
+    <div class="mt-10 overflow-x-auto rounded-lg border border-(--rule) bg-(--surface)">
+      <table class="w-full min-w-[720px] border-collapse text-left font-mono text-[13px] [&_td]:border [&_td]:border-(--rule) [&_td]:px-3 [&_td]:py-2 [&_tr:hover]:bg-(--cellhead)/50">
+        <thead class="bg-(--cellhead) text-(--muted)">
+          <tr>
+            <td class="font-medium">expression</td>
+            <td class="font-medium">JavaRosa</td>
+            <td class="font-medium">Enketo</td>
+            <td class="font-medium">rxeval follows</td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>resident[2]/name</td><td class="text-red-400">nothing at all</td><td class="text-emerald-300">the second one</td><td>Enketo</td></tr>
+          <tr><td>last() · floor() · ceiling()</td><td class="text-red-400">absent</td><td class="text-emerald-300">present</td><td>Enketo</td></tr>
+          <tr><td>//name</td><td class="text-red-400">no // axis</td><td class="text-emerald-300">descendant search</td><td>Enketo</td></tr>
+          <tr><td>regex("a123…b", "[0-9]{11}")</td><td>anchored → false</td><td>unanchored → true</td><td>JavaRosa</td></tr>
+          <tr><td>round(-1.5)</td><td>−1 (half up)</td><td>−2 (away from zero)</td><td>Enketo</td></tr>
+          <tr><td>boolean-from-string("TRUE")</td><td>true</td><td>false</td><td>JavaRosa</td></tr>
+          <tr><td>distance() · area()</td><td>full precision</td><td>rounded to 2 dp</td><td>JavaRosa</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-4 max-w-3xl text-[15px] leading-relaxed text-(--muted)">
+      Seven of twenty-six. Every rule in this crate was decided by putting the same
+      expression to both engines and reading the two answers — and each split is
+      written into the test suite with the side rxeval follows and why. The test
+      fails if a recorded disagreement stops disagreeing, because that is news too.
+    </p>
+
+    <figure class="mt-10">
+      <img src="../oracle.svg" alt="A corpus of 126 expressions is put to JavaRosa, to Enketo's evaluator and to rxeval; the two references agree on 99 and split on 26." class="w-full rounded-lg border border-(--rule) bg-(--surface)">
+    </figure>
+  </div>
+</section>
+
+<!-- ======================= portability ======================= -->
+<section id="portability">
+  <div class="mx-auto max-w-6xl px-5 py-20">
+    <p class="font-mono text-[13px] tracking-[0.15em] uppercase text-(--accent)">before anyone collects with it</p>
+    <h2 class="font-display mt-3 max-w-3xl text-4xl font-semibold tracking-tight">Which of your rules will not travel.</h2>
+    <p class="mt-5 max-w-3xl text-lg leading-relaxed text-(--muted)">
+      Because the two languages differ, a form can be correct in one place and
+      quietly wrong in the other. rxeval reads a form and says so — with the bind
+      it belongs to, what breaks where, and what to write instead.
+    </p>
+
+    <div class="mt-8 overflow-hidden rounded-lg border border-(--rule) bg-(--color-term)">
+      <div class="border-b border-white/10 px-4 py-2 font-mono text-xs text-(--color-termtext)/50">rxeval::check_form(&amp;xform)?</div>
+      <pre class="overflow-x-auto px-5 py-4 font-mono text-[13px] leading-relaxed text-(--color-termtext)"><code><span class="text-amber-300">/data/resident[2]/name (relevant)</span>: a bare positional predicate —
+  JavaRosa returns nothing for [n]; use [position() = n] on Collect /
+  KoboCollect. <span class="text-emerald-300">Write [position() = 2] instead.</span>
+
+<span class="text-amber-300">/data/total (calculate)</span>: /p/morador/maior, which this form's instance
+  has no node for — the path matches nothing, so the rule reads an empty
+  node-set: a calculation comes out 0, a comparison comes out false, and a
+  relevant hides its question for the whole of fieldwork, identically on
+  both engines. <span class="text-emerald-300">Write /data/morador/maior instead.</span></code></pre>
+    </div>
+    <p class="mt-4 max-w-3xl text-[15px] leading-relaxed text-(--muted)">
+      The second one is not a portability problem at all: it travels perfectly and
+      is wrong everywhere it goes. It is reported here because it is found the same
+      way and matters more — nothing else in the ecosystem catches it, and a
+      calculation that silently comes out zero is discovered when the report is
+      written, not when the data is collected.
+    </p>
+  </div>
+</section>
+
+<!-- ======================= filling ======================= -->
+<section id="session" class="rule-y bg-(--surface)/60">
+  <div class="mx-auto max-w-6xl px-5 py-20">
+    <div class="grid gap-10 lg:grid-cols-2">
+      <div>
+        <p class="font-mono text-[13px] tracking-[0.15em] uppercase text-(--accent)">two directions</p>
+        <h2 class="font-display mt-3 text-4xl font-semibold tracking-tight">Judging a submission, and filling one.</h2>
+        <p class="mt-5 text-lg leading-relaxed text-(--muted)">
+          <code class="font-mono text-[0.9em]">Rules</code> answers questions about a
+          finished submission: is this valid, what does it calculate to, which nodes
+          were relevant. That is the right shape for a server checking what arrived,
+          and the wrong shape for a screen someone is typing into.
+        </p>
+        <p class="mt-4 text-lg leading-relaxed text-(--muted)">
+          <code class="font-mono text-[0.9em]">Session</code> is the other direction.
+          It holds the instance, applies what the form derives, and reports what
+          moved. Calculations run in dependency order, so one feeding another settles
+          in a single pass; only paths whose value actually changed are reported,
+          because a renderer redrawing every calculated field on every keystroke
+          fights the cursor.
+        </p>
+        <p class="mt-4 text-lg leading-relaxed text-(--muted)">
+          Deliberately the same engine as the server check. A form that behaves one
+          way while it is being filled and another way when it arrives is worse than
+          one that is wrong consistently: only the first kind produces data nobody
+          can explain.
+        </p>
+      </div>
+      <div class="self-start overflow-hidden rounded-lg border border-(--rule) bg-(--color-term)">
+        <div class="border-b border-white/10 px-4 py-2 font-mono text-xs text-(--color-termtext)/50">a repeat, row by row</div>
+        <pre class="overflow-x-auto px-5 py-4 font-mono text-[13px] leading-relaxed text-(--color-termtext)"><code>session.add_row("/data/resident")?;
+session.set("/data/resident[1]/age", "40")?;
+session.set("/data/resident[2]/age", "9")?;
+session.recompute();
+
+session.get("/data/resident[1]/adult")   <span class="text-sky-300">"1"</span>
+session.get("/data/resident[2]/adult")   <span class="text-sky-300">"0"</span>
+session.get("/data/total_adults")        <span class="text-sky-300">"1"</span>
+
+<span class="text-(--color-termtext)/60">// and relevance is per row, too</span>
+outcome.relevant["/data/resident[2]/works"]  <span class="text-amber-300">false</span></code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= three targets ======================= -->
+<section>
+  <div class="mx-auto max-w-6xl px-5 py-20">
+    <p class="font-mono text-[13px] tracking-[0.15em] uppercase text-(--accent)">one implementation, compiled three ways</p>
+    <h2 class="font-display mt-3 max-w-3xl text-4xl font-semibold tracking-tight">The same answer on a server, on a phone, and in an analysis script.</h2>
+    <p class="mt-5 max-w-3xl text-lg leading-relaxed text-(--muted)">
+      A web form that asked a server what its own rules mean needs a connection for
+      every keystroke, which rules out the place survey work happens — a bus stop, a
+      doorway, a basement. Compiling the same Rust to WebAssembly removes the network
+      from the interview without introducing a second implementation to drift from
+      the first.
+    </p>
+
+    <figure class="mt-10">
+      <img src="../architecture.svg" alt="An XForm and an instance go into rxeval, which compiles to native code, WebAssembly and R; all three give the same verdict." class="w-full rounded-lg border border-(--rule) bg-(--surface)">
+    </figure>
+
+    <div class="mt-10 grid gap-4 sm:grid-cols-3">
+      <div class="rounded-lg border border-(--rule) bg-(--surface) p-5">
+        <p class="font-mono text-sm text-(--accent)">native</p>
+        <p class="mt-2 text-[15px] leading-relaxed text-(--muted)">A server checking what arrived, against the form it published.</p>
+      </div>
+      <div class="rounded-lg border border-(--rule) bg-(--surface) p-5">
+        <p class="font-mono text-sm text-(--accent)">WebAssembly</p>
+        <p class="mt-2 text-[15px] leading-relaxed text-(--muted)">A browser filling a form with no signal, deciding locally.</p>
+      </div>
+      <div class="rounded-lg border border-(--rule) bg-(--surface) p-5">
+        <p class="font-mono text-sm text-(--accent)">R</p>
+        <p class="mt-2 text-[15px] leading-relaxed text-(--muted)">Checking a questionnaire from an analysis script, before the field.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= install ======================= -->
+<section id="install" class="rule-y bg-(--surface)/60">
+  <div class="mx-auto max-w-6xl px-5 py-20">
+    <p class="font-mono text-[13px] tracking-[0.15em] uppercase text-(--accent)">install</p>
+    <h2 class="font-display mt-3 text-4xl font-semibold tracking-tight">One dependency, and it is optional.</h2>
+
+    <div class="mt-8 grid gap-4 lg:grid-cols-2">
+      <div class="overflow-hidden rounded-lg border border-(--rule) bg-(--color-term)">
+        <div class="border-b border-white/10 px-4 py-2 font-mono text-xs text-(--color-termtext)/50">Cargo.toml</div>
+        <pre class="px-5 py-4 font-mono text-[13px] leading-relaxed text-(--color-termtext)"><code>[dependencies]
+rxeval = "0.1"</code></pre>
+      </div>
+      <div class="overflow-hidden rounded-lg border border-(--rule) bg-(--color-term)">
+        <div class="border-b border-white/10 px-4 py-2 font-mono text-xs text-(--color-termtext)/50">smaller, for WebAssembly</div>
+        <pre class="px-5 py-4 font-mono text-[13px] leading-relaxed text-(--color-termtext)"><code>rxeval = { version = "0.1",
+           default-features = false }</code></pre>
+      </div>
+    </div>
+    <p class="mt-4 max-w-3xl text-[15px] leading-relaxed text-(--muted)">
+      The only dependency is a regex engine, behind a feature. A build without it
+      refuses <code class="font-mono text-[0.9em]">regex()</code> rather than
+      guessing at it: a rule that did not run is not a rule that passed.
+    </p>
+  </div>
+</section>
+
+<!-- ======================= footer ======================= -->
+<footer class="border-t border-(--rule)">
+  <div class="mx-auto max-w-6xl px-5 py-12">
+    <div class="grid gap-8 sm:grid-cols-3">
+      <div>
+        <p class="font-display text-lg font-semibold">rxeval</p>
+        <p class="mt-2 text-[15px] leading-relaxed text-(--muted)">Runs the logic inside an ODK form. BSD-2-Clause.</p>
+      </div>
+      <div>
+        <p class="font-mono text-xs uppercase tracking-[0.15em] text-(--muted)">companion</p>
+        <p class="mt-2 text-[15px] leading-relaxed text-(--muted)">
+          <a class="underline decoration-(--rule) underline-offset-4 hover:decoration-(--accent)" href="https://github.com/milkway/rxform">rxform</a>
+          turns an XLSForm spreadsheet into the XForm this crate then runs.
+        </p>
+      </div>
+      <div>
+        <p class="font-mono text-xs uppercase tracking-[0.15em] text-(--muted)">links</p>
+        <p class="mt-2 flex flex-col gap-1.5 font-mono text-sm text-(--muted)">
+          <a class="hover:text-(--accent) transition-colors" href="https://github.com/milkway/rxeval">github</a>
+          <a class="hover:text-(--accent) transition-colors" href="https://crates.io/crates/rxeval">crates.io</a>
+          <a class="hover:text-(--accent) transition-colors" href="https://docs.rs/rxeval">docs.rs</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

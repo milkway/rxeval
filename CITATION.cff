@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "rxeval: an ODK/OpenRosa XForms evaluation engine measured against JavaRosa and Enketo"
+type: software
+authors:
+  - family-names: "Leite"
+    given-names: "André"
+    email: "leite@de.ufpe.br"
+repository-code: "https://github.com/milkway/rxeval"
+url: "https://milkway.github.io/rxeval/"
+license: BSD-2-Clause
+keywords:
+  - XForm
+  - XPath
+  - ODK
+  - OpenRosa
+  - survey
+  - JavaRosa
+  - Enketo
+abstract: >-
+  rxeval evaluates the logic inside an ODK/OpenRosa XForm — relevant,
+  constraint, required and calculate — as XPath 1.0 with the OpenRosa
+  extensions, with no dependencies, on a server, in a browser through
+  WebAssembly, and in R. The ODK ecosystem has two evaluation engines,
+  JavaRosa inside ODK Collect and Enketo's openrosa-xpath-evaluator inside
+  web forms, and neither is a superset of the other. Every rule in rxeval
+  was decided by putting the same expression to both and reading the two
+  answers: of 126 expressions in the corpus the two references agree on 99
+  and disagree with each other on 26, each recorded with the side rxeval
+  follows and why. The same reading drives a portability check that reports,
+  before collection begins, which of a form's rules will behave differently
+  on a tablet and in a browser.
