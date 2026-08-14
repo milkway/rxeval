@@ -157,3 +157,40 @@ fn a_form_can_be_put_down_and_picked_up() {
     assert!(outcome.calculated.is_empty(), "{:?}", outcome.calculated);
     assert_eq!(outcome.relevant.get("/data/guardian"), Some(&true));
 }
+
+/// A constraint message may be a translation key rather than a sentence.
+///
+/// Handing back `jr:itext('/data/age:jr:constraintMsg')` puts the form's own
+/// plumbing in front of the person the message was written for — which is
+/// exactly what a real form did on screen before this was fixed.
+#[test]
+fn a_translated_message_arrives_translated() {
+    const TRANSLATED: &str = r#"<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+      <h:head>
+        <model>
+          <itext>
+            <translation lang="Português (pt)" default="">
+              <text id="/data/age:jr:constraintMsg">
+                <value>Idade fora do intervalo aceito.</value>
+              </text>
+            </translation>
+          </itext>
+          <instance><data id="t"><age/></data></instance>
+          <bind nodeset="/data/age" type="int" constraint=". &lt; 130"
+                jr:constraintMsg="jr:itext('/data/age:jr:constraintMsg')"/>
+        </model>
+      </h:head>
+      <h:body/>
+    </h:html>"#;
+
+    let mut session = Session::new(TRANSLATED, clock()).unwrap();
+    session.set("/data/age", "200").unwrap();
+    let outcome = session.recompute();
+    assert_eq!(
+        outcome.invalid,
+        vec![(
+            "/data/age".to_string(),
+            "Idade fora do intervalo aceito.".to_string()
+        )]
+    );
+}

@@ -559,6 +559,16 @@ impl Form {
                     .strip_prefix(MODEL_ROOT_PATH)
                     .unwrap_or(&violation.node_path)
                     .to_string();
+                // A message may be a translation key rather than a
+                // sentence. Handing back `jr:itext('…:jr:constraintMsg')`
+                // puts the form's own plumbing in front of the person the
+                // message was written for.
+                if let Some(message) = &violation.message {
+                    if message.trim_start().starts_with("jr:itext(") {
+                        let root = model.root().unwrap_or(NodeId(0));
+                        violation.message = Some(self.resolve_reference(message, &model, root));
+                    }
+                }
                 violation
             })
             .collect()
