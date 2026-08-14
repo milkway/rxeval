@@ -313,47 +313,6 @@ fn unescape(text: &str) -> String {
         .replace("&amp;", "&")
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn builds_a_tree_with_paths_and_order() {
-        let instance =
-            Instance::from_xml(r#"<data id="f"><a>1</a><g><b>2</b></g><a>3</a></data>"#).unwrap();
-        let root = instance.root().unwrap();
-        assert_eq!(instance.node(root).name, "data");
-        assert_eq!(instance.attributes(root).len(), 1);
-
-        let children = instance.children(root);
-        assert_eq!(children.len(), 3);
-        assert_eq!(instance.string_value(children[0]), "1");
-        assert_eq!(instance.path_of(children[2]), "/data/a");
-
-        let b = instance.children(children[1])[0];
-        assert_eq!(instance.path_of(b), "/data/g/b");
-        // document order follows the document, not the arena
-        assert!(instance.document_order(children[0]) < instance.document_order(b));
-        assert!(instance.document_order(b) < instance.document_order(children[2]));
-    }
-
-    #[test]
-    fn entities_and_self_closing_tags() {
-        let instance = Instance::from_xml(r#"<data><a>x &amp; y</a><b/><c>z</c></data>"#).unwrap();
-        let children = instance.children(instance.root().unwrap());
-        assert_eq!(instance.string_value(children[0]), "x & y");
-        assert_eq!(instance.string_value(children[1]), "");
-        assert_eq!(instance.string_value(children[2]), "z");
-    }
-
-    #[test]
-    fn a_broken_document_is_an_error_not_a_shrug() {
-        assert!(Instance::from_xml("<data><a></b></data>").is_err());
-        assert!(Instance::from_xml("<data><a>").is_err());
-        assert!(Instance::from_xml("no tags here").is_err());
-    }
-}
-
 impl Instance {
     /// The `<instance id="…">` element of a lookup table in this document.
     ///
@@ -393,5 +352,46 @@ impl Instance {
             self.append_child(created, copied);
         }
         created
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builds_a_tree_with_paths_and_order() {
+        let instance =
+            Instance::from_xml(r#"<data id="f"><a>1</a><g><b>2</b></g><a>3</a></data>"#).unwrap();
+        let root = instance.root().unwrap();
+        assert_eq!(instance.node(root).name, "data");
+        assert_eq!(instance.attributes(root).len(), 1);
+
+        let children = instance.children(root);
+        assert_eq!(children.len(), 3);
+        assert_eq!(instance.string_value(children[0]), "1");
+        assert_eq!(instance.path_of(children[2]), "/data/a");
+
+        let b = instance.children(children[1])[0];
+        assert_eq!(instance.path_of(b), "/data/g/b");
+        // document order follows the document, not the arena
+        assert!(instance.document_order(children[0]) < instance.document_order(b));
+        assert!(instance.document_order(b) < instance.document_order(children[2]));
+    }
+
+    #[test]
+    fn entities_and_self_closing_tags() {
+        let instance = Instance::from_xml(r#"<data><a>x &amp; y</a><b/><c>z</c></data>"#).unwrap();
+        let children = instance.children(instance.root().unwrap());
+        assert_eq!(instance.string_value(children[0]), "x & y");
+        assert_eq!(instance.string_value(children[1]), "");
+        assert_eq!(instance.string_value(children[2]), "z");
+    }
+
+    #[test]
+    fn a_broken_document_is_an_error_not_a_shrug() {
+        assert!(Instance::from_xml("<data><a></b></data>").is_err());
+        assert!(Instance::from_xml("<data><a>").is_err());
+        assert!(Instance::from_xml("no tags here").is_err());
     }
 }
