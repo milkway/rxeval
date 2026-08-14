@@ -421,17 +421,65 @@ pub fn call(
             Ok(Value::String(env.now()))
         }
 
+        // ---- dates
+        "format-date" | "format-date-time" => {
+            arity(&[2])?;
+            let value = text(0)?;
+            if value.trim().is_empty() {
+                return Ok(Value::String(String::new()));
+            }
+            let parts = parse_iso(&value)
+                .ok_or_else(|| format!("{name}(): {value:?} is not an ISO date or date-time"))?;
+            Ok(Value::String(format_date_parts(&parts, &text(1)?)?))
+        }
+
+        // ---- pattern matching
+        //
+        // The spec says a pattern matches any part of the value unless it is
+        // anchored; JavaRosa anchors it always, and JavaRosa is what runs on
+        // the devices whose submissions this checks. Following the spec here
+        // would flag answers the collecting app accepted — see
+        // getodk/javarosa#531.
+        "regex" => {
+            arity(&[2])?;
+            let value = text(0)?;
+            let pattern = text(1)?;
+            regex_matches(&value, &pattern)
+        }
+
+        // ---- choice labels
+        "jr:choice-name" | "choice-name" => {
+            arity(&[2])?;
+            let value = text(0)?;
+            if value.trim().is_empty() {
+                return Ok(Value::String(String::new()));
+            }
+            // The second argument names a question; it is written as a
+            // string because the form is pointing at one, not reading it.
+            let question = match args.get(1) {
+                Some(Expr::Literal(path)) => path.trim().to_string(),
+                _ => text(1)?.trim().to_string(),
+            };
+            env.choice_label(&value, &question)
+                .map(Value::String)
+                .ok_or_else(|| {
+                    format!(
+                        "{name}(): no choice {value:?} for {question} — the evaluator \
+                         was given no choice list for that question"
+                    )
+                })
+        }
+
         // ---- named but not implemented
         //
         // Listed by name so the message says which piece is missing rather
         // than "unknown function", and so nobody mistakes the gap for a
         // feature that silently returned nothing.
-        "pulldata" | "jr:choice-name" | "choice-name" | "indexed-repeat" | "current"
-        | "randomize" | "uuid" | "digest" | "format-date" | "format-date-time" | "date"
-        | "date-time" | "decimal-date-time" | "decimal-time" | "area" | "distance" | "regex"
+        "pulldata" | "indexed-repeat" | "current" | "randomize" | "uuid" | "digest" | "date"
+        | "date-time" | "decimal-date-time" | "decimal-time" | "area" | "distance"
         | "checklist" | "weighted-checklist" | "position-in-repeat" => Err(format!(
             "{name}() is not implemented yet — rxeval refuses to guess at a \
-             value the form will act on"
+                 value the form will act on"
         )),
 
         other => Err(format!("unknown function {other}()")),
@@ -442,4 +490,132 @@ pub fn call(
 /// callers testing functions do not reach across modules.
 pub fn number_to_string(n: f64) -> String {
     format_number(n)
+}
+
+// ---------------------------------------------------------------------------
+// Dates
+// ---------------------------------------------------------------------------
+
+/// The parts of an ISO date or datetime, read lexically.
+///
+/// Lexically on purpose: an ODK datetime carries its own offset
+/// (`2026-08-07T06:31:13.834-03:00`) and the local time is already written
+/// in it. Converting to some other zone to format it would move the
+/// timestamp to a moment the interview did not happen at.
+struct DateParts {
+    year: i64,
+    month: u32,
+    day: u32,
+    hour: u32,
+    minute: u32,
+    second: u32,
+    millisecond: u32,
+}
+
+fn parse_iso(text: &str) -> Option<DateParts> {
+    let text = text.trim();
+    let (date, rest) = match text.split_once(['T', ' ']) {
+        Some((date, rest)) => (date, Some(rest)),
+        None => (text, None),
+    };
+    let mut date_parts = date.split('-');
+    // a leading '-' would be a negative year, which no form collects
+    let year: i64 = date_parts.next()?.parse().ok()?;
+    let month: u32 = date_parts.next()?.parse().ok()?;
+    let day: u32 = date_parts.next()?.parse().ok()?;
+    if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+        return None;
+    }
+
+    let (mut hour, mut minute, mut second, mut millisecond) = (0, 0, 0, 0);
+    if let Some(rest) = rest {
+        // drop the offset or Z before reading the clock
+        let clock = rest
+            .split(['+', 'Z', 'z'])
+            .next()
+            .unwrap_or(rest)
+            // a '-' after the time is an offset, not a separator
+            .rsplit_once('-')
+            .map(|(head, _)| head)
+            .unwrap_or(rest.split(['+', 'Z', 'z']).next().unwrap_or(rest));
+        let mut clock_parts = clock.split(':');
+        hour = clock_parts.next().and_then(|h| h.parse().ok()).unwrap_or(0);
+        minute = clock_parts.next().and_then(|m| m.parse().ok()).unwrap_or(0);
+        if let Some(seconds) = clock_parts.next() {
+            let (whole, fraction) = match seconds.split_once('.') {
+                Some((w, f)) => (w, Some(f)),
+                None => (seconds, None),
+            };
+            second = whole.parse().unwrap_or(0);
+            if let Some(fraction) = fraction {
+                let digits: String = fraction.chars().take(3).collect();
+                let padded = format!("{digits:0<3}");
+                millisecond = padded.parse().unwrap_or(0);
+            }
+        }
+    }
+    Some(DateParts {
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
+        millisecond,
+    })
+}
+
+/// ODK's date formatting codes.
+///
+/// The numeric codes only. `%a` and `%b` are the day and month names *in
+/// the form's language*, and this crate has no language: emitting English
+/// into a Portuguese questionnaire would be a wrong answer rather than a
+/// missing one, so they are refused by name.
+fn format_date_parts(parts: &DateParts, format: &str) -> Result<String> {
+    let mut out = String::new();
+    let mut chars = format.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c != '%' {
+            out.push(c);
+            continue;
+        }
+        match chars.next() {
+            Some('Y') => out.push_str(&format!("{:04}", parts.year)),
+            Some('y') => out.push_str(&format!("{:02}", parts.year.rem_euclid(100))),
+            Some('m') => out.push_str(&format!("{:02}", parts.month)),
+            Some('n') => out.push_str(&parts.month.to_string()),
+            Some('d') => out.push_str(&format!("{:02}", parts.day)),
+            Some('e') => out.push_str(&parts.day.to_string()),
+            Some('H') => out.push_str(&format!("{:02}", parts.hour)),
+            Some('h') => out.push_str(&parts.hour.to_string()),
+            Some('M') => out.push_str(&format!("{:02}", parts.minute)),
+            Some('S') => out.push_str(&format!("{:02}", parts.second)),
+            Some('3') => out.push_str(&format!("{:03}", parts.millisecond)),
+            Some('%') => out.push('%'),
+            Some(other @ ('a' | 'b')) => {
+                return Err(format!(
+                    "%{other} names a day or month in the form's language, and this \
+                     evaluator has none — it will not guess one"
+                ))
+            }
+            Some(other) => return Err(format!("unknown date format code %{other}")),
+            None => return Err("a date format ends with a bare %".into()),
+        }
+    }
+    Ok(out)
+}
+
+/// JavaRosa semantics: the pattern must match the whole value.
+#[cfg(feature = "regex")]
+fn regex_matches(value: &str, pattern: &str) -> Result<Value> {
+    let anchored = format!("^(?:{pattern})$");
+    let compiled = regex::Regex::new(&anchored).map_err(|e| {
+        format!("regex(): {pattern:?} is not a pattern this engine can build — {e}")
+    })?;
+    Ok(Value::Boolean(compiled.is_match(value)))
+}
+
+#[cfg(not(feature = "regex"))]
+fn regex_matches(_value: &str, _pattern: &str) -> Result<Value> {
+    Err("regex() needs the `regex` feature, which this build does not have".into())
 }

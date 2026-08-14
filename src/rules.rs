@@ -521,13 +521,21 @@ const MODEL_ROOT_PATH: &str = "/model";
 pub struct Form {
     pub rules: Rules,
     secondary: BTreeMap<String, Instance>,
+    /// The XForm body and its translations, kept for `jr:choice-name()`:
+    /// answering it means finding the question's choice list and then the
+    /// label of one item.
+    body: Option<Instance>,
+    itext: BTreeMap<String, String>,
 }
 
 impl Form {
     pub fn parse(xform: &str) -> Result<Self, String> {
+        let document = Instance::from_xml(xform).map_err(|e| format!("XForm XML: {e}"))?;
         Ok(Form {
             rules: from_xform(xform)?,
             secondary: secondary_instances(xform)?,
+            itext: translations(&document),
+            body: Some(document),
         })
     }
 
@@ -536,6 +544,8 @@ impl Form {
         let model = self.model_of(submission);
         let env = FormEnvironment {
             secondary: &self.secondary,
+            form: self,
+            model: &model,
             clock,
         };
         self.rules
@@ -580,6 +590,156 @@ impl Form {
     pub fn secondary_instance_ids(&self) -> Vec<&str> {
         self.secondary.keys().map(String::as_str).collect()
     }
+
+    /// The label a question's choice list gives to one value.
+    ///
+    /// Two shapes exist and both appear in real forms: choices written out
+    /// in the body, and an `<itemset>` pointing at a lookup table. Either
+    /// way the label may be a translation key rather than text, which is
+    /// why the itext table is carried alongside.
+    fn choice_label(&self, model: &Instance, value: &str, question_path: &str) -> Option<String> {
+        let body = self.body.as_ref()?;
+        let control = find_control(body, question_path)?;
+
+        // choices spelled out in the body
+        for item in body.children(control) {
+            if body.node(item).name != "item" {
+                continue;
+            }
+            let item_value = body
+                .children(item)
+                .into_iter()
+                .find(|c| body.node(*c).name == "value")
+                .map(|c| body.string_value(c))
+                .unwrap_or_default();
+            if item_value.trim() != value.trim() {
+                continue;
+            }
+            let label = body
+                .children(item)
+                .into_iter()
+                .find(|c| body.node(*c).name == "label")?;
+            return Some(self.resolve_label(body, label, None, model));
+        }
+
+        // choices drawn from a lookup table
+        let itemset = body
+            .children(control)
+            .into_iter()
+            .find(|c| body.node(*c).name == "itemset")?;
+        let nodeset = attribute_of(body, itemset, "nodeset")?;
+        let value_ref = body
+            .children(itemset)
+            .into_iter()
+            .find(|c| body.node(*c).name == "value")
+            .and_then(|c| attribute_of(body, c, "ref"))
+            .unwrap_or_else(|| "name".to_string());
+
+        let expr = crate::parser::parse(&nodeset).ok()?;
+        let root = model.root()?;
+        let env = FormEnvironment {
+            secondary: &self.secondary,
+            form: self,
+            model,
+            clock: Clock {
+                today: String::new(),
+                now: String::new(),
+            },
+        };
+        let items = match evaluate(&expr, model, Context::at(root), &env) {
+            Ok(Value::NodeSet(nodes)) => nodes,
+            _ => return None,
+        };
+        let label_ref = body
+            .children(itemset)
+            .into_iter()
+            .find(|c| body.node(*c).name == "label")
+            .and_then(|c| attribute_of(body, c, "ref"));
+
+        for item in items {
+            let holds = model
+                .children(item)
+                .into_iter()
+                .find(|c| model.node(*c).name == value_ref)
+                .map(|c| model.string_value(c))
+                .unwrap_or_default();
+            if holds.trim() != value.trim() {
+                continue;
+            }
+            return Some(match &label_ref {
+                Some(reference) => self.resolve_reference(reference, model, item),
+                // No label declared: the value is the best name there is.
+                None => holds,
+            });
+        }
+        None
+    }
+
+    /// A `<label ref="…"/>` on an item written out in the body.
+    fn resolve_label(
+        &self,
+        body: &Instance,
+        label: NodeId,
+        item: Option<NodeId>,
+        model: &Instance,
+    ) -> String {
+        match attribute_of(body, label, "ref") {
+            Some(reference) => self.resolve_reference(
+                &reference,
+                model,
+                item.unwrap_or_else(|| model.root().unwrap_or(NodeId(0))),
+            ),
+            None => body.string_value(label),
+        }
+    }
+
+    /// `jr:itext('id')` becomes the translated text; anything else is an
+    /// expression evaluated against the item it labels.
+    fn resolve_reference(&self, reference: &str, model: &Instance, item: NodeId) -> String {
+        let reference = reference.trim();
+        if let Some(rest) = reference.strip_prefix("jr:itext(") {
+            let inner = rest.trim_end_matches(')').trim();
+            // a literal id, or an expression naming one
+            let id = match inner.strip_prefix('\'').and_then(|s| s.strip_suffix('\'')) {
+                Some(literal) => literal.to_string(),
+                None => match crate::parser::parse(inner) {
+                    Ok(expr) => {
+                        let env = FormEnvironment {
+                            secondary: &self.secondary,
+                            form: self,
+                            model,
+                            clock: Clock {
+                                today: String::new(),
+                                now: String::new(),
+                            },
+                        };
+                        evaluate(&expr, model, Context::at(item), &env)
+                            .map(|v| v.to_string_value(model))
+                            .unwrap_or_default()
+                    }
+                    Err(_) => String::new(),
+                },
+            };
+            return self.itext.get(&id).cloned().unwrap_or(id);
+        }
+        match crate::parser::parse(reference) {
+            Ok(expr) => {
+                let env = FormEnvironment {
+                    secondary: &self.secondary,
+                    form: self,
+                    model,
+                    clock: Clock {
+                        today: String::new(),
+                        now: String::new(),
+                    },
+                };
+                evaluate(&expr, model, Context::at(item), &env)
+                    .map(|v| v.to_string_value(model))
+                    .unwrap_or_default()
+            }
+            Err(_) => String::new(),
+        }
+    }
 }
 
 /// What `today()` and `now()` answer.
@@ -597,12 +757,18 @@ pub struct Clock {
 
 struct FormEnvironment<'a> {
     secondary: &'a BTreeMap<String, Instance>,
+    form: &'a Form,
+    model: &'a Instance,
     clock: Clock,
 }
 
 impl Environment for FormEnvironment<'_> {
     fn secondary_instance(&self, id: &str) -> Option<&Instance> {
         self.secondary.get(id)
+    }
+
+    fn choice_label(&self, value: &str, question_path: &str) -> Option<String> {
+        self.form.choice_label(self.model, value, question_path)
     }
     fn today(&self) -> String {
         self.clock.today.clone()
@@ -661,4 +827,66 @@ fn subtree(source: &Instance, from: NodeId) -> Instance {
     let root = copy(source, from, &mut target);
     target.set_root(root);
     target
+}
+
+fn attribute_of(document: &Instance, node: NodeId, name: &str) -> Option<String> {
+    document
+        .attributes(node)
+        .into_iter()
+        .find(|a| document.node(*a).name == name)
+        .map(|a| document.node(a).value.clone())
+}
+
+/// The body control bound to a path. Forms write the reference with stray
+/// spaces often enough that comparing them trimmed is the only way to find
+/// anything.
+fn find_control(body: &Instance, path: &str) -> Option<NodeId> {
+    let wanted = path.trim();
+    let root = body.root()?;
+    let mut nodes = vec![root];
+    nodes.extend(body.descendants(root));
+    nodes.into_iter().find(|node| {
+        matches!(
+            body.node(*node).name.as_str(),
+            "select1" | "select" | "input" | "upload" | "range" | "odk:rank" | "rank"
+        ) && attribute_of(body, *node, "ref").is_some_and(|r| r.trim() == wanted)
+    })
+}
+
+/// The default translation, as id → text.
+///
+/// The first language wins: a violation report shows one string, and
+/// picking the form's own default is closer to what its author reads than
+/// any other choice this crate could make.
+fn translations(document: &Instance) -> BTreeMap<String, String> {
+    let mut out = BTreeMap::new();
+    let Some(root) = document.root() else {
+        return out;
+    };
+    let mut nodes = vec![root];
+    nodes.extend(document.descendants(root));
+    let Some(translation) = nodes
+        .iter()
+        .find(|node| document.node(**node).name == "translation")
+    else {
+        return out;
+    };
+    for text in document.children(*translation) {
+        if document.node(text).name != "text" {
+            continue;
+        }
+        let Some(id) = attribute_of(document, text, "id") else {
+            continue;
+        };
+        // <value> holds the string, sometimes several for different forms
+        // of the same label; the first is the plain one.
+        if let Some(value) = document
+            .children(text)
+            .into_iter()
+            .find(|c| document.node(*c).name == "value")
+        {
+            out.insert(id, document.string_value(value));
+        }
+    }
+    out
 }

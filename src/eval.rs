@@ -108,6 +108,12 @@ pub trait Environment {
     fn secondary_instance(&self, _id: &str) -> Option<&Instance> {
         None
     }
+    /// The label a choice list gives to `value` for the question at
+    /// `question_path`. Answered by whoever holds the form; a bare
+    /// evaluator has no choice lists and says so.
+    fn choice_label(&self, _value: &str, _question_path: &str) -> Option<String> {
+        None
+    }
     /// ISO date for `today()`.
     fn today(&self) -> String;
     /// ISO datetime for `now()`.

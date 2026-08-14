@@ -211,14 +211,14 @@ fn a_rule_inside_a_repeat_reads_its_own_instance() {
 #[test]
 fn a_rule_that_cannot_run_is_reported_not_assumed() {
     let mut field = binding("/data/x");
-    field.constraint = Some(parse("format-date(., '%Y') = '2026'").unwrap());
+    field.constraint = Some(parse("pulldata('t', 'c', 'k', .) = 'sim'").unwrap());
     let rules = rules(vec![field]);
 
     let instance = Instance::from_xml("<data><x>2026-01-01</x></data>").unwrap();
     let found = rules.check(&instance, &env());
     assert_eq!(found.len(), 1);
     match &found[0].kind {
-        ViolationKind::Failed(why) => assert!(why.contains("format-date"), "{why}"),
+        ViolationKind::Failed(why) => assert!(why.contains("pulldata"), "{why}"),
         other => panic!("expected a failure to evaluate, got {other:?}"),
     }
 }

@@ -9,7 +9,15 @@ authors.workspace = true
 keywords = ["odk", "xforms", "xpath", "openrosa", "survey"]
 categories = ["parser-implementations"]
 
+[features]
+default = ["regex"]
+# regex() needs an engine. Behind a feature so a size-constrained build —
+# WebAssembly, mostly — can drop it and get an honest refusal instead of a
+# wrong answer.
+regex = ["dep:regex"]
+
 [dependencies]
+regex = { version = "1", optional = true }
 
 [dev-dependencies]
 # only to generate XForms for the tests; the crate itself takes XML

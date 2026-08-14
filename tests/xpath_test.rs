@@ -214,10 +214,14 @@ fn what_is_missing_says_so_instead_of_answering() {
     for expression in [
         "pulldata('x', 'y', 'z', 'w')",
         "indexed-repeat(/data/a, /data/b, 1)",
-        "format-date(now(), '%Y')",
-        "jr:choice-name(/data/consent, '/data/consent')",
+        "current()/age",
         "nosuchfunction(1)",
         "$var",
+        // the day and month names depend on the form's language, which a
+        // bare evaluator does not have
+        "format-date-time(now(), '%a')",
+        // and a choice label needs a choice list
+        "jr:choice-name(/data/consent, '/data/consent')",
     ] {
         let outcome = eval_str(expression, &instance(), &env());
         assert!(
@@ -230,11 +234,52 @@ fn what_is_missing_says_so_instead_of_answering() {
 
 #[test]
 fn errors_name_the_function_that_is_missing() {
-    let message = eval_str("format-date(now(), '%Y')", &instance(), &env()).unwrap_err();
-    assert!(message.contains("format-date"), "{message}");
+    let message = eval_str("pulldata('a', 'b', 'c', 'd')", &instance(), &env()).unwrap_err();
+    assert!(message.contains("pulldata"), "{message}");
     assert!(message.contains("not implemented"), "{message}");
 
     let message = eval_str("count('a string')", &instance(), &env()).unwrap_err();
     assert!(message.contains("count()"), "{message}");
     assert!(message.contains("a string"), "{message}");
+}
+
+#[test]
+fn dates_format_with_odks_codes() {
+    assert_eq!(
+        string("format-date-time('2026-08-07T06:31:13.834-03:00', '%Y%m%d%H%M%S')"),
+        "20260807063113"
+    );
+    assert_eq!(
+        string("format-date-time('2026-08-07T06:31:13.834-03:00', '%3')"),
+        "834"
+    );
+    // a date with no clock reads as midnight
+    assert_eq!(
+        string("format-date('2026-01-09', '%Y-%m-%d')"),
+        "2026-01-09"
+    );
+    assert_eq!(string("format-date('2026-01-09', '%e/%n/%y')"), "9/1/26");
+    // the offset is not applied: the local time is already what is written,
+    // and shifting it would move the interview to a moment it did not happen
+    assert_eq!(
+        string("format-date-time('2026-08-07T23:30:00.000-03:00', '%d %H')"),
+        "07 23"
+    );
+    // nothing in, nothing out
+    assert_eq!(string("format-date('', '%Y')"), "");
+    // and a value that is not a date says so
+    assert!(eval_str("format-date('ontem', '%Y')", &instance(), &env()).is_err());
+}
+
+#[test]
+fn regex_is_anchored_the_way_the_devices_do_it() {
+    // JavaRosa matches the whole value even without anchors, and JavaRosa is
+    // what collected the data. The spec says otherwise — getodk/javarosa#531
+    assert!(boolean("regex('12345678901', '[0-9]{11}')"));
+    assert!(!boolean("regex('a12345678901b', '[0-9]{11}')"));
+    // explicit anchors change nothing, which is the point
+    assert!(boolean("regex('12345678901', '^[0-9]{11}$')"));
+    assert!(!boolean("regex('123', '[0-9]{11}')"));
+    // a pattern this engine cannot build is refused, not treated as no match
+    assert!(eval_str("regex('x', '(?<=a)b')", &instance(), &env()).is_err());
 }
