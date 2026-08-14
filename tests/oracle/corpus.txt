@@ -135,3 +135,16 @@ regex(/data/cpf, "[0-9]{11}")
 regex("a12345678901b", "[0-9]{11}")
 regex("abc123", "[0-9]+")
 concat(/data/household/resident/nome)
+
+# --- geografia
+# Um traço fechado e um aberto, mais o caso degenerado de um ponto só:
+# a fórmula da área tem variantes, e um ponto isolado é onde elas divergem.
+distance(/data/trecho)
+distance(/data/area_quadra)
+distance(/data/um_ponto)
+distance("-23.5505 -46.6333 0 0;-23.5605 -46.6333 0 0")
+area(/data/area_quadra)
+area(/data/trecho)
+area("-1 -1 0 0;-1 1 0 0;1 1 0 0;1 -1 0 0;-1 -1 0 0")
+round(distance(/data/trecho))
+round(area(/data/area_quadra))

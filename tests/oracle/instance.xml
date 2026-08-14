@@ -12,6 +12,10 @@
   <date>2026-08-07</date>
   <stamp>2026-08-07T06:31:13.834-03:00</stamp>
   <cpf>12345678901</cpf>
+  <ponto>-23.5505 -46.6333 760 5</ponto>
+  <trecho>-23.5505 -46.6333 760 5;-23.5605 -46.6433 762 5;-23.5705 -46.6333 758 5</trecho>
+  <area_quadra>-23.5505 -46.6333 0 0;-23.5505 -46.6233 0 0;-23.5605 -46.6233 0 0;-23.5605 -46.6333 0 0;-23.5505 -46.6333 0 0</area_quadra>
+  <um_ponto>-23.5505 -46.6333 760 5</um_ponto>
   <household>
     <resident><nome>Ana</nome><idade>34</idade></resident>
     <resident><nome>Bia</nome><idade>7</idade></resident>

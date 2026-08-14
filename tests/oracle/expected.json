@@ -90,7 +90,7 @@
   ".": {
     "type": "nodeset",
     "value": [
-      "\n  42\n  1500.5\n  0\n  -7\n  yes\n  Maria da Silva\n    padded  \n  water power\n  water\n  \n  2026-08-07\n  2026-08-07T06:31:13.834-03:00\n  12345678901\n  \n    Ana34\n    Bia7\n    Caio19\n  \n"
+      "\n  42\n  1500.5\n  0\n  -7\n  yes\n  Maria da Silva\n    padded  \n  water power\n  water\n  \n  2026-08-07\n  2026-08-07T06:31:13.834-03:00\n  12345678901\n  -23.5505 -46.6333 760 5\n  -23.5505 -46.6333 760 5;-23.5605 -46.6433 762 5;-23.5705 -46.6333 758 5\n  -23.5505 -46.6333 0 0;-23.5505 -46.6233 0 0;-23.5605 -46.6233 0 0;-23.5605 -46.6333 0 0;-23.5505 -46.6333 0 0\n  -23.5505 -46.6333 760 5\n  \n    Ana34\n    Bia7\n    Caio19\n  \n"
     ],
     "via": "openrosa"
   },
@@ -552,7 +552,7 @@
   },
   "once(/data/age)": {
     "type": "string",
-    "value": "\n  42\n  1500.5\n  0\n  -7\n  yes\n  Maria da Silva\n    padded  \n  water power\n  water\n  \n  2026-08-07\n  2026-08-07T06:31:13.834-03:00\n  12345678901\n  \n    Ana34\n    Bia7\n    Caio19\n  \n",
+    "value": "\n  42\n  1500.5\n  0\n  -7\n  yes\n  Maria da Silva\n    padded  \n  water power\n  water\n  \n  2026-08-07\n  2026-08-07T06:31:13.834-03:00\n  12345678901\n  -23.5505 -46.6333 760 5\n  -23.5505 -46.6333 760 5;-23.5605 -46.6433 762 5;-23.5705 -46.6333 758 5\n  -23.5505 -46.6333 0 0;-23.5505 -46.6233 0 0;-23.5605 -46.6233 0 0;-23.5605 -46.6333 0 0;-23.5505 -46.6333 0 0\n  -23.5505 -46.6333 760 5\n  \n    Ana34\n    Bia7\n    Caio19\n  \n",
     "via": "openrosa"
   },
   "format-date-time(\"2026-08-07T06:31:13.834-03:00\", \"%Y%m%d%H%M%S\")": {
@@ -613,6 +613,51 @@
   "concat(/data/household/resident/nome)": {
     "type": "string",
     "value": "AnaBiaCaio",
+    "via": "openrosa"
+  },
+  "distance(/data/trecho)": {
+    "type": "number",
+    "value": 3020.19,
+    "via": "openrosa"
+  },
+  "distance(/data/area_quadra)": {
+    "type": "number",
+    "value": 4267.24,
+    "via": "openrosa"
+  },
+  "distance(/data/um_ponto)": {
+    "type": "number",
+    "value": 0,
+    "via": "openrosa"
+  },
+  "distance(\"-23.5505 -46.6333 0 0;-23.5605 -46.6333 0 0\")": {
+    "type": "number",
+    "value": 1113.19,
+    "via": "openrosa"
+  },
+  "area(/data/area_quadra)": {
+    "type": "number",
+    "value": 1135931.15,
+    "via": "openrosa"
+  },
+  "area(/data/trecho)": {
+    "type": "number",
+    "value": 1135887.92,
+    "via": "openrosa"
+  },
+  "area(\"-1 -1 0 0;-1 1 0 0;1 1 0 0;1 -1 0 0;-1 -1 0 0\")": {
+    "type": "number",
+    "value": 49565024543.22,
+    "via": "openrosa"
+  },
+  "round(distance(/data/trecho))": {
+    "type": "number",
+    "value": 3020,
+    "via": "openrosa"
+  },
+  "round(area(/data/area_quadra))": {
+    "type": "number",
+    "value": 1135931,
     "via": "openrosa"
   }
 }

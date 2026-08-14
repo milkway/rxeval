@@ -234,8 +234,14 @@ fn what_is_missing_says_so_instead_of_answering() {
 
 #[test]
 fn errors_name_the_function_that_is_missing() {
+    // pulldata() is implemented now; what it still refuses is a table that
+    // was never loaded, and the message says which table.
     let message = eval_str("pulldata('a', 'b', 'c', 'd')", &instance(), &env()).unwrap_err();
     assert!(message.contains("pulldata"), "{message}");
+    assert!(message.contains("'a'"), "{message}");
+
+    let message = eval_str("indexed-repeat(/data/x, /data/y, 1)", &instance(), &env()).unwrap_err();
+    assert!(message.contains("indexed-repeat"), "{message}");
     assert!(message.contains("not implemented"), "{message}");
 
     let message = eval_str("count('a string')", &instance(), &env()).unwrap_err();

@@ -149,6 +149,75 @@ fn agree(a: &Answer, b: &Answer, instance: &Instance) -> bool {
 /// nothing in either tool says so.
 fn reference_disagreements() -> BTreeMap<&'static str, (&'static str, &'static str)> {
     BTreeMap::from([
+        // JavaRosa refuses a geo function given a literal — "requires a
+        // field as the parameter" — while Enketo evaluates it with a
+        // spherical formula. We accept the literal and use JavaRosa's
+        // planar arithmetic on it, so this answer follows neither: it is
+        // JavaRosa's number for a call JavaRosa will not make.
+        //
+        // Refusing instead would buy nothing. A literal geometry is a test
+        // or a constant, never field data, and the number that matters —
+        // the one computed from a captured shape — is JavaRosa's exactly.
+        (
+            "area(\"-1 -1 0 0;-1 1 0 0;1 1 0 0;1 -1 0 0;-1 -1 0 0\")",
+            (
+                "neither",
+                "JavaRosa refuses a literal; Enketo answers with a spherical formula, which \
+                 over two degrees differs from the planar one by 0.01%",
+            ),
+        ),
+        // ---- geography
+        //
+        // The two references agree on the geometry and disagree on how much
+        // of it to report: Enketo rounds distance() and area() to two
+        // decimals, JavaRosa does not. A form comparing a distance against
+        // a threshold can land on either side of it, and a form that shows
+        // the number to an enumerator shows a different number.
+        //
+        // We follow JavaRosa, for two reasons. The data already collected
+        // was measured by it, on tablets; and rounding is something a
+        // caller can do and cannot undo.
+        (
+            "distance(/data/trecho)",
+            (
+                "javarosa",
+                "Enketo rounds to two decimals; JavaRosa does not",
+            ),
+        ),
+        (
+            "distance(/data/area_quadra)",
+            (
+                "javarosa",
+                "Enketo rounds to two decimals; JavaRosa does not",
+            ),
+        ),
+        (
+            "distance(\"-23.5505 -46.6333 0 0;-23.5605 -46.6333 0 0\")",
+            (
+                "javarosa",
+                "Enketo rounds to two decimals; JavaRosa does not",
+            ),
+        ),
+        // area() disagrees by more than rounding: JavaRosa projects the
+        // points onto a plane and takes the shoelace of that, Enketo uses a
+        // spherical formula. Over a city block the two land within a square
+        // metre of each other; over a degree of latitude they part company
+        // by a tenth of a percent. Following JavaRosa keeps our answers
+        // equal to what the tablets computed.
+        (
+            "area(/data/area_quadra)",
+            (
+                "javarosa",
+                "Enketo rounds, and its formula is spherical rather than planar",
+            ),
+        ),
+        (
+            "area(/data/trecho)",
+            (
+                "javarosa",
+                "Enketo rounds, and its formula is spherical rather than planar",
+            ),
+        ),
         // JavaRosa has no bare positional predicate: `resident[2]` matches
         // nothing there, while `[position() = 2]` works. A form using the
         // shorthand reads fine, passes review, and silently collects

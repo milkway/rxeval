@@ -496,9 +496,100 @@ pub fn call(
         // Listed by name so the message says which piece is missing rather
         // than "unknown function", and so nobody mistakes the gap for a
         // feature that silently returned nothing.
-        "pulldata" | "indexed-repeat" | "current" | "randomize" | "uuid" | "digest" | "date"
-        | "date-time" | "decimal-date-time" | "decimal-time" | "area" | "distance"
-        | "checklist" | "weighted-checklist" | "position-in-repeat" => Err(format!(
+        // ---- geography
+        //
+        // Measured against JavaRosa 5.1.0, whose bytecode was read rather
+        // than whose behaviour was guessed at: the earth is a sphere of
+        // radius 6_378_100 m, distance is the spherical law of cosines, and
+        // area is a shoelace over a planar projection — not the spherical
+        // excess formula a textbook would suggest. The difference is small
+        // and it is not zero, and matching it is the point.
+        //
+        // Enketo rounds both to two decimals; this does not. See the
+        // ecosystem oracle, where that disagreement is recorded.
+        "distance" => {
+            let points = geo_points(&arg(0)?, instance)?;
+            let mut total = 0.0;
+            for pair in points.windows(2) {
+                total += great_circle(pair[0], pair[1]);
+            }
+            Ok(Value::Number(total))
+        }
+        "area" => {
+            let points = geo_points(&arg(0)?, instance)?;
+            Ok(Value::Number(shoelace_area(&points)))
+        }
+
+        // ---- pulldata
+        //
+        // Neither reference implements this. JavaRosa answers "cannot handle
+        // function 'pulldata'" and Enketo's evaluator answers "Unknown
+        // function", both checked against the versions in tests/oracle —
+        // because it is not an XForms function at all. ODK Collect
+        // registers it at runtime as its own handler, and pyxform (and
+        // rxform) leave the call in the expression for it to find.
+        //
+        // So this one is written from the documented behaviour rather than
+        // measured against a reference, and that is worth saying out loud:
+        // it looks up the first row of a lookup table whose `query` column
+        // holds `value`, and answers with that row's `column`. A miss is an
+        // empty string and not an error, because a form calls this on every
+        // recalculation, long before the answer it queries by exists.
+        "pulldata" => {
+            let file = arg(0)?.to_string_value(instance);
+            let column = arg(1)?.to_string_value(instance);
+            let query = arg(2)?.to_string_value(instance);
+            let wanted = arg(3)?.to_string_value(instance);
+
+            let Some(table) = env.secondary_instance(&file) else {
+                // A table that was never loaded is not the same as a row
+                // that is not there, and a form author debugging a blank
+                // answer needs to know which of the two happened.
+                return Err(format!(
+                    "pulldata() cannot find the table '{file}' — the form declares it as \
+                     an external file, and nothing has loaded it"
+                ));
+            };
+            let Some(root) = table.root() else {
+                return Ok(Value::String(String::new()));
+            };
+            // A secondary instance is the `<instance>` element, and the rows
+            // sit under the wrapper inside it — `<root><item>…` is what
+            // ODK's CSV import produces. A table written some other way has
+            // its rows directly under the instance, so both shapes are
+            // accepted rather than one being assumed.
+            let rows = {
+                let children = table.children(root);
+                match children.as_slice() {
+                    [only] if !table.children(*only).is_empty() => table.children(*only),
+                    _ => children,
+                }
+            };
+            for item in rows {
+                let holds = table
+                    .children(item)
+                    .into_iter()
+                    .find(|child| table.node(*child).name == query)
+                    .map(|child| table.string_value(child))
+                    .unwrap_or_default();
+                if holds.trim() != wanted.trim() {
+                    continue;
+                }
+                return Ok(Value::String(
+                    table
+                        .children(item)
+                        .into_iter()
+                        .find(|child| table.node(*child).name == column)
+                        .map(|child| table.string_value(child))
+                        .unwrap_or_default(),
+                ));
+            }
+            Ok(Value::String(String::new()))
+        }
+
+        "indexed-repeat" | "current" | "randomize" | "uuid" | "digest" | "date" | "date-time"
+        | "decimal-date-time" | "decimal-time" | "checklist" | "weighted-checklist"
+        | "position-in-repeat" => Err(format!(
             "{name}() is not implemented yet — rxeval refuses to guess at a \
                  value the form will act on"
         )),
@@ -639,4 +730,85 @@ fn regex_matches(value: &str, pattern: &str) -> Result<Value> {
 #[cfg(not(feature = "regex"))]
 fn regex_matches(_value: &str, _pattern: &str) -> Result<Value> {
     Err("regex() needs the `regex` feature, which this build does not have".into())
+}
+
+// ---------------------------------------------------------------------------
+// Geography
+// ---------------------------------------------------------------------------
+
+/// The earth JavaRosa uses. Not the WGS84 equatorial radius (6_378_137) and
+/// not a mean radius: this exact number is what ODK Collect computed with,
+/// so it is what the data in hand was measured against.
+const EARTH_RADIUS_METERS: f64 = 6_378_100.0;
+const EARTH_CIRCUMFERENCE_METERS: f64 = 4.007478420772212e7;
+
+/// The points a geo value names.
+///
+/// A geopoint is `lat lon altitude accuracy`; a geotrace or geoshape is
+/// several of those separated by semicolons. Altitude and accuracy are read
+/// and ignored — they are part of the value and no part of the geometry.
+fn geo_points(value: &Value, instance: &Instance) -> Result<Vec<(f64, f64)>> {
+    let text = value.to_string_value(instance);
+    let mut points = Vec::new();
+    for part in text.split(';') {
+        let part = part.trim();
+        if part.is_empty() {
+            continue;
+        }
+        let mut numbers = part.split_whitespace();
+        let latitude: f64 = match numbers.next().and_then(|n| n.parse().ok()) {
+            Some(n) => n,
+            // A value that is not a coordinate is not an error: a form asks
+            // for the distance of a trace that has not been captured yet on
+            // every recalculation, and that is worth zero, not a failure.
+            None => return Ok(Vec::new()),
+        };
+        let longitude: f64 = match numbers.next().and_then(|n| n.parse().ok()) {
+            Some(n) => n,
+            None => return Ok(Vec::new()),
+        };
+        points.push((latitude, longitude));
+    }
+    Ok(points)
+}
+
+/// Great-circle distance by the spherical law of cosines, which is what
+/// JavaRosa computes — not the haversine a numerical analyst would prefer.
+/// The two differ in the last digits, and a form comparing a distance
+/// against a threshold can land on either side of it.
+fn great_circle(from: (f64, f64), to: (f64, f64)) -> f64 {
+    let (lat1, lon1) = (from.0.to_radians(), from.1.to_radians());
+    let (lat2, lon2) = (to.0.to_radians(), to.1.to_radians());
+    let cosine = lat1.sin() * lat2.sin() + lat1.cos() * lat2.cos() * (lon2 - lon1).cos();
+    EARTH_RADIUS_METERS * cosine.clamp(-1.0, 1.0).acos()
+}
+
+/// Area by the shoelace formula over a flat projection centred on the first
+/// point.
+///
+/// The polygon closes itself: with every coordinate measured from the first
+/// point, that point sits at the origin, and the segment back to it
+/// contributes nothing. So a trace and the same trace with its first point
+/// repeated at the end give the same answer — which is what JavaRosa does,
+/// and what a form that forgot to close its shape depends on.
+fn shoelace_area(points: &[(f64, f64)]) -> f64 {
+    if points.len() < 3 {
+        return 0.0;
+    }
+    let (lat0, lon0) = points[0];
+    let planar: Vec<(f64, f64)> = points
+        .iter()
+        .map(|(lat, lon)| {
+            (
+                (lon - lon0) * EARTH_CIRCUMFERENCE_METERS * lat.to_radians().cos() / 360.0,
+                (lat - lat0) * EARTH_CIRCUMFERENCE_METERS / 360.0,
+            )
+        })
+        .collect();
+
+    let mut total = 0.0;
+    for pair in planar.windows(2) {
+        total += (pair[1].0 * pair[0].1 - pair[0].0 * pair[1].1) / 2.0;
+    }
+    total.abs()
 }

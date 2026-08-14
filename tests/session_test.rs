@@ -348,3 +348,148 @@ fn the_verdict_counts_the_rows() {
     session.remove_row("/data/morador", 1).unwrap();
     assert_eq!(session.recompute().repeats.get("/data/morador"), Some(&1));
 }
+
+// ---------------------------------------------------------------------------
+// pulldata
+// ---------------------------------------------------------------------------
+
+const LOOKUP: &str = r#"<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml">
+  <h:head>
+    <model>
+      <instance>
+        <data id="lookup">
+          <codigo/>
+          <nome_lote/>
+          <empresa/>
+          <ausente/>
+          <meta><instanceID/></meta>
+        </data>
+      </instance>
+      <instance id="lotes">
+        <root>
+          <item><codigo>AR-01</codigo><nome>Articulação Norte</nome><empresa>Viação A</empresa></item>
+          <item><codigo>AR-02</codigo><nome>Articulação Sul</nome><empresa>Viação B</empresa></item>
+        </root>
+      </instance>
+      <bind nodeset="/data/nome_lote" type="string"
+            calculate="pulldata('lotes', 'nome', 'codigo', /data/codigo)"/>
+      <bind nodeset="/data/empresa" type="string"
+            calculate="pulldata('lotes', 'empresa', 'codigo', /data/codigo)"/>
+      <bind nodeset="/data/ausente" type="string"
+            calculate="pulldata('lotes', 'nome', 'codigo', 'ZZ-99')"/>
+    </model>
+  </h:head>
+  <h:body/>
+</h:html>"#;
+
+/// `pulldata` reads a row of a lookup table by one of its columns.
+///
+/// Neither reference implements it: JavaRosa answers "cannot handle
+/// function 'pulldata'" and Enketo's evaluator "Unknown function". It is
+/// ODK Collect's own runtime handler, and pyxform — and rxform — leave the
+/// call in the expression for it to find. So this is written from the
+/// documented behaviour, which is worth knowing when reading it.
+#[test]
+fn pulldata_reads_a_row_by_a_column() {
+    let mut session = Session::new(LOOKUP, clock()).unwrap();
+    session.set("/data/codigo", "AR-02").unwrap();
+    let outcome = session.recompute();
+
+    assert_eq!(session.get("/data/nome_lote"), "Articulação Sul");
+    assert_eq!(session.get("/data/empresa"), "Viação B");
+    // A row that is not there is an empty answer and not a failure: a form
+    // calls this on every recalculation, long before the answer it queries
+    // by exists.
+    assert_eq!(session.get("/data/ausente"), "");
+    assert!(outcome.failed.is_empty(), "{:?}", outcome.failed);
+
+    // and it follows the answer it queries by
+    session.set("/data/codigo", "AR-01").unwrap();
+    session.recompute();
+    assert_eq!(session.get("/data/nome_lote"), "Articulação Norte");
+}
+
+/// A table the form never loaded is not the same as a row that is not
+/// there, and a form author staring at a blank answer needs to know which.
+#[test]
+fn a_missing_table_says_so() {
+    const MISSING: &str = r#"<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml">
+      <h:head><model>
+        <instance><data id="m"><x/></data></instance>
+        <bind nodeset="/data/x" type="string"
+              calculate="pulldata('nunca_carregada', 'a', 'b', 'c')"/>
+      </model></h:head><h:body/></h:html>"#;
+    let mut session = Session::new(MISSING, clock()).unwrap();
+    let outcome = session.recompute();
+    let (path, why) = outcome.failed.first().expect("a reported failure");
+    assert_eq!(path, "/data/x");
+    assert!(why.contains("nunca_carregada"), "{why}");
+    assert!(why.contains("nothing has loaded it"), "{why}");
+}
+
+// ---------------------------------------------------------------------------
+// Geography
+// ---------------------------------------------------------------------------
+
+/// Distance and area, against numbers taken from JavaRosa 5.1.0 — whose
+/// bytecode was read to get the constants right. The earth is a sphere of
+/// radius 6_378_100 m, distance is the spherical law of cosines, and area
+/// is a shoelace over a planar projection.
+#[test]
+fn geography_matches_the_engine_on_the_tablets() {
+    const GEO: &str = r#"<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml">
+      <h:head><model>
+        <instance><data id="g"><trecho/><quadra/><vazio/><metros/><m2/></data></instance>
+        <bind nodeset="/data/metros" type="decimal" calculate="distance(/data/trecho)"/>
+        <bind nodeset="/data/m2" type="decimal" calculate="area(/data/quadra)"/>
+      </model></h:head><h:body/></h:html>"#;
+    let mut session = Session::new(GEO, clock()).unwrap();
+    session
+        .set(
+            "/data/trecho",
+            "-23.5505 -46.6333 760 5;-23.5605 -46.6433 762 5;-23.5705 -46.6333 758 5",
+        )
+        .unwrap();
+    session
+        .set(
+            "/data/quadra",
+            "-23.5505 -46.6333 0 0;-23.5505 -46.6233 0 0;-23.5605 -46.6233 0 0;\
+             -23.5605 -46.6333 0 0;-23.5505 -46.6333 0 0",
+        )
+        .unwrap();
+    session.recompute();
+
+    let metres: f64 = session.get("/data/metros").parse().unwrap();
+    let square: f64 = session.get("/data/m2").parse().unwrap();
+    assert!((metres - 3020.19014542737).abs() < 1e-9, "{metres}");
+    assert!((square - 1135931.14588564).abs() < 1e-6, "{square}");
+
+    // A shape that has not been captured yet is worth nothing, not a
+    // failure: the form asks for its area on every recalculation.
+    session.set("/data/quadra", "").unwrap();
+    let outcome = session.recompute();
+    assert_eq!(session.get("/data/m2"), "0");
+    assert!(outcome.failed.is_empty(), "{:?}", outcome.failed);
+}
+
+/// A polygon closes itself, because every coordinate is measured from the
+/// first point and the segment back to it contributes nothing. A form that
+/// forgot to repeat its first point gets the same answer as one that did.
+#[test]
+fn a_shape_closes_itself() {
+    const GEO: &str = r#"<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml">
+      <h:head><model>
+        <instance><data id="g"><aberto/><fechado/><a/><f/></data></instance>
+        <bind nodeset="/data/a" type="decimal" calculate="area(/data/aberto)"/>
+        <bind nodeset="/data/f" type="decimal" calculate="area(/data/fechado)"/>
+      </model></h:head><h:body/></h:html>"#;
+    let mut session = Session::new(GEO, clock()).unwrap();
+    let aberto = "-23.55 -46.63 0 0;-23.55 -46.62 0 0;-23.56 -46.62 0 0;-23.56 -46.63 0 0";
+    session.set("/data/aberto", aberto).unwrap();
+    session
+        .set("/data/fechado", &format!("{aberto};-23.55 -46.63 0 0"))
+        .unwrap();
+    session.recompute();
+    assert_eq!(session.get("/data/a"), session.get("/data/f"));
+    assert!(session.get("/data/a").parse::<f64>().unwrap() > 1_000_000.0);
+}

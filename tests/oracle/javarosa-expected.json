@@ -1,5 +1,5 @@
 {
-  "$meta": {"engine": "javarosa", "version": "5.1.0-SNAPSHOT-6fcc5e2"},
+  "$meta": {"engine": "javarosa", "version": "5.1.0"},
   "/data/age": {"type": "nodeset", "value": ["42"], "via": "javarosa"},
   "/data/missing": {"type": "nodeset", "value": [], "via": "javarosa"},
   "/data/household/resident/nome": {"type": "nodeset", "value": ["Ana", "Bia", "Caio"], "via": "javarosa"},
@@ -116,5 +116,14 @@
   "regex(/data/cpf, \"[0-9]{11}\")": {"type": "boolean", "value": true, "via": "javarosa"},
   "regex(\"a12345678901b\", \"[0-9]{11}\")": {"type": "boolean", "value": false, "via": "javarosa"},
   "regex(\"abc123\", \"[0-9]+\")": {"type": "boolean", "value": false, "via": "javarosa"},
-  "concat(/data/household/resident/nome)": {"type": "string", "value": "AnaBiaCaio", "via": "javarosa"}
+  "concat(/data/household/resident/nome)": {"type": "string", "value": "AnaBiaCaio", "via": "javarosa"},
+  "distance(/data/trecho)": {"type": "number", "value": 3020.19014542737, "via": "javarosa"},
+  "distance(/data/area_quadra)": {"type": "number", "value": 4267.237348415521, "via": "javarosa"},
+  "distance(/data/um_ponto)": {"type": "number", "value": 0.0, "via": "javarosa"},
+  "distance(\"-23.5505 -46.6333 0 0;-23.5605 -46.6333 0 0\")": {"type": "number", "value": 1113.1884482834857, "via": "javarosa"},
+  "area(/data/area_quadra)": {"type": "number", "value": 1135931.145885644, "via": "javarosa"},
+  "area(/data/trecho)": {"type": "number", "value": 1135887.9292798014, "via": "javarosa"},
+  "area(\"-1 -1 0 0;-1 1 0 0;1 1 0 0;1 -1 0 0;-1 -1 0 0\")": {"type": "error", "value": "eval: XPath evaluation: cannot handle function 'area' requires a field as the parameter.", "via": "javarosa"},
+  "round(distance(/data/trecho))": {"type": "number", "value": 3020.0, "via": "javarosa"},
+  "round(area(/data/area_quadra))": {"type": "number", "value": 1135931.0, "via": "javarosa"}
 }

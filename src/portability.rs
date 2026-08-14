@@ -246,6 +246,40 @@ fn check_function(name: &str, args: &[Expr], out: &mut Vec<Finding>) {
             "JavaRosa has no last(), so the rule fails".into(),
             Some("count() of the repeat".into()),
         )),
+        // pulldata is not an XForms function at all: ODK Collect registers
+        // it as its own handler at runtime, and pyxform leaves the call in
+        // the expression for it to find. Enketo's evaluator has no such
+        // handler, so a form built on pulldata cannot be filled on the web
+        // at all — which is a different and larger problem than a rule that
+        // computes something else.
+        "pulldata" => out.push((
+            "pulldata()".into(),
+            Breaks::WebForms,
+            "pulldata() is ODK Collect's own function, not an XForms one. Enketo does not \
+             have it, so every rule that calls it fails there"
+                .into(),
+            Some("instance('file')/root/item[key = …]/column, which both engines evaluate".into()),
+        )),
+        // Both engines have these and neither agrees with the other on what
+        // comes back. The geometry is the same; how much of it is reported
+        // is not, and area() is not even computed the same way.
+        "distance" => out.push((
+            "distance()".into(),
+            Breaks::Differently,
+            "Enketo rounds the answer to two decimals and JavaRosa does not, so a rule \
+             comparing a distance against a threshold can fall either side of it"
+                .into(),
+            Some("round(distance(…)) or a comparison with room to spare".into()),
+        )),
+        "area" => out.push((
+            "area()".into(),
+            Breaks::Differently,
+            "JavaRosa projects the shape onto a plane and Enketo uses a spherical formula, \
+             and Enketo also rounds to two decimals. Over a city block the two agree within \
+             a square metre; over a degree they differ by a tenth of a percent"
+                .into(),
+            Some("round() the result, or compare with a margin".into()),
+        )),
         "floor" => out.push((
             "floor()".into(),
             Breaks::Collect,

@@ -248,3 +248,34 @@ fn a_pattern_that_is_not_written_out() {
         issues[0]
     );
 }
+
+/// A form built on `pulldata` cannot be filled on the web at all, and one
+/// using `area` or `distance` gets a different number in each engine. Both
+/// are worth saying at publish time rather than after a week of fieldwork.
+#[test]
+fn geography_and_pulldata_are_reported() {
+    let xform = r#"<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml">
+      <h:head><model>
+        <instance><data id="p"><t/><a/><b/><c/></data></instance>
+        <bind nodeset="/data/a" calculate="pulldata('lotes', 'nome', 'codigo', /data/t)"/>
+        <bind nodeset="/data/b" calculate="distance(/data/t)"/>
+        <bind nodeset="/data/c" calculate="area(/data/t)"/>
+      </model></h:head><h:body/></h:html>"#;
+    let issues = rxeval::check_form(xform).unwrap();
+    let found: Vec<(&str, &str)> = issues
+        .iter()
+        .map(|i| (i.construct.as_str(), i.breaks.describe()))
+        .collect();
+    assert!(
+        found.contains(&("pulldata()", "Enketo web forms")),
+        "{found:?}"
+    );
+    assert!(
+        found.contains(&("distance()", "both, differently")),
+        "{found:?}"
+    );
+    assert!(
+        found.contains(&("area()", "both, differently")),
+        "{found:?}"
+    );
+}
