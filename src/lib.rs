@@ -27,10 +27,12 @@
 pub mod eval;
 pub mod functions;
 pub mod parser;
+pub mod rules;
 pub mod tree;
 
 pub use eval::{evaluate, Context, Environment, Fixed, Value};
 pub use parser::{parse, Expr};
+pub use rules::{Binding, Rules, Violation, ViolationKind};
 pub use tree::{Instance, NodeId};
 
 /// Parse and evaluate one expression against an instance, with `.` at the

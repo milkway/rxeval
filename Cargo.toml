@@ -10,3 +10,7 @@ keywords = ["odk", "xforms", "xpath", "openrosa", "survey"]
 categories = ["parser-implementations"]
 
 [dependencies]
+
+[dev-dependencies]
+# only to generate XForms for the tests; the crate itself takes XML
+rxform = "0.1.2"
