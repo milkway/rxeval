@@ -279,3 +279,111 @@ fn geography_and_pulldata_are_reported() {
         "{found:?}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Paths that name nothing
+// ---------------------------------------------------------------------------
+
+/// A path into a node the instance does not have is silent in both engines:
+/// the node-set is empty, sum() reads 0, a comparison reads false, and a
+/// relevant hides its question for the whole of fieldwork.
+#[test]
+fn a_path_that_names_nothing_is_reported() {
+    let xform = r#"<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+      <h:head><model>
+        <instance>
+          <data id="p">
+            <morador jr:template=""><idade/><maior/></morador>
+            <morador><idade/><maior/></morador>
+            <total/>
+            <errado/>
+          </data>
+        </instance>
+        <bind nodeset="/data/morador/maior" calculate="if(../idade &gt;= 18, 1, 0)"/>
+        <bind nodeset="/data/total" calculate="sum(/p/morador/maior)"/>
+        <bind nodeset="/data/errado" relevant="/data/nao_existe = 1"/>
+      </model></h:head><h:body><repeat nodeset="/data/morador"/></h:body></h:html>"#;
+
+    let issues = rxeval::check_form(xform).unwrap();
+    let silent: Vec<&rxeval::Issue> = issues
+        .iter()
+        .filter(|i| i.breaks == rxeval::Breaks::Everywhere)
+        .collect();
+    assert_eq!(
+        silent.len(),
+        2,
+        "{:?}",
+        issues.iter().map(|i| i.describe()).collect::<Vec<_>>()
+    );
+
+    // The wrong root, with the right path offered: the fix is visible at a
+    // glance and does not need the author to work out what happened.
+    let sum = silent
+        .iter()
+        .find(|i| i.path == "/data/total")
+        .expect("the sum");
+    assert!(
+        sum.construct.starts_with("/p/morador/maior"),
+        "{}",
+        sum.construct
+    );
+    assert_eq!(sum.suggestion.as_deref(), Some("/data/morador/maior"));
+    assert!(
+        sum.describe().contains("identically on both engines"),
+        "{}",
+        sum.describe()
+    );
+
+    // A name that exists nowhere gets no invented suggestion.
+    let relevant = silent
+        .iter()
+        .find(|i| i.path == "/data/errado")
+        .expect("the relevant");
+    assert_eq!(relevant.suggestion, None);
+}
+
+/// The check must not cry wolf, or it gets switched off.
+///
+/// Every path here is legitimate, and each one is a shape an earlier draft
+/// of this check reported as broken.
+#[test]
+fn legitimate_paths_are_left_alone() {
+    let xform = r#"<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+      <h:head><model>
+        <instance>
+          <data id="p">
+            <ident><ponto/><linha/></ident>
+            <morador jr:template=""><idade/><adulto/></morador>
+            <morador><idade/><adulto/></morador>
+            <lote/><copia/><conta/><attr/>
+          </data>
+        </instance>
+        <instance id="linhas">
+          <root><item><name/><lote/></item></root>
+        </instance>
+        <instance id="externa" src="jr://file-csv/externa.csv"/>
+        <!-- inside a predicate on a lookup table, `name` is the table's
+             column and has nothing to do with this form's instance -->
+        <bind nodeset="/data/lote" calculate="instance('linhas')/root/item[name = /data/ident/linha]/lote"/>
+        <!-- an external table has no inline shape to check the rest against -->
+        <bind nodeset="/data/copia" calculate="instance('externa')/root/item[codigo = /data/ident/ponto]/nome"/>
+        <!-- relative, at the top level, where the context is the bound node -->
+        <bind nodeset="/data/morador/adulto" calculate="if(../idade &gt;= 18, 1, 0)"/>
+        <!-- a whole repeat, and a count over it -->
+        <bind nodeset="/data/conta" calculate="count(/data/morador)"/>
+        <!-- an attribute of the root -->
+        <bind nodeset="/data/attr" calculate="/data/@id"/>
+      </model></h:head><h:body><repeat nodeset="/data/morador"/></h:body></h:html>"#;
+
+    let issues: Vec<String> = rxeval::check_form(xform)
+        .unwrap()
+        .into_iter()
+        .filter(|i| i.breaks == rxeval::Breaks::Everywhere)
+        .map(|i| i.describe())
+        .collect();
+    assert!(
+        issues.is_empty(),
+        "false alarms:\n  {}",
+        issues.join("\n  ")
+    );
+}

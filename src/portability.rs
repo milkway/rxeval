@@ -11,6 +11,8 @@
 //! Every rule here was found by putting the same expression to both engines
 //! and reading the two answers — see `tests/ecosystem_oracle_test.rs`.
 
+use std::collections::BTreeSet;
+
 use crate::parser::{Axis, Expr, NameTest, Step};
 
 /// Which engine stumbles.
@@ -24,6 +26,11 @@ pub enum Breaks {
     /// Both run it, and mean different things by it. The worst kind,
     /// because nothing fails.
     Differently,
+    /// Both run it and both do the same nothing. Not a portability problem
+    /// at all — a form problem, which travels perfectly and is wrong
+    /// everywhere it goes. Kept in the same report because it is found the
+    /// same way and matters more.
+    Everywhere,
 }
 
 impl Breaks {
@@ -32,6 +39,7 @@ impl Breaks {
             Breaks::Collect => "Collect / KoboCollect",
             Breaks::WebForms => "Enketo web forms",
             Breaks::Differently => "both, differently",
+            Breaks::Everywhere => "both, identically and silently",
         }
     }
 }
@@ -57,11 +65,17 @@ impl Issue {
             Some(s) => format!(" Write {s} instead."),
             None => String::new(),
         };
+        // The engine clause reads differently for a fault that is not
+        // about engines at all: "on both, identically and silently" tacked
+        // onto the end of a sentence about an empty node-set is a riddle.
+        let engines = match self.breaks {
+            Breaks::Everywhere => "identically on both engines".to_string(),
+            Breaks::Differently => "and the two engines differ".to_string(),
+            other => format!("on {}", other.describe()),
+        };
         format!(
-            "{where_}: {} — {} on {}.{fix}",
-            self.construct,
-            self.effect,
-            self.breaks.describe()
+            "{where_}: {} — {}, {engines}.{fix}",
+            self.construct, self.effect
         )
     }
 }
@@ -91,6 +105,8 @@ pub fn check_form(xform: &str) -> Result<Vec<Issue>, String> {
             repeats.push(nodeset.trim().to_string());
         }
     }
+
+    let shape = Shape::of(&document);
 
     let mut issues = Vec::new();
     for node in &nodes {
@@ -125,6 +141,7 @@ pub fn check_form(xform: &str) -> Result<Vec<Issue>, String> {
             };
             let mut found = Vec::new();
             inspect(&parsed, &repeats, &mut found);
+            check_paths(&parsed, &path, &shape, &mut found);
             for (construct, breaks, effect, suggestion) in found {
                 issues.push(Issue {
                     path: path.trim().to_string(),
@@ -428,4 +445,225 @@ fn has_top_level_alternation(pattern: &str) -> bool {
         }
     }
     false
+}
+
+// ---------------------------------------------------------------------------
+// Paths that name nothing
+// ---------------------------------------------------------------------------
+//
+// A form's instance is fixed when the form is written, so a path in a rule
+// either names a node in it or names nothing at all — and naming nothing is
+// silent. XPath answers an empty node-set, which `sum()` reads as 0,
+// `count()` as 0, a comparison as false, and a `relevant` as "do not ask".
+// So a calculation quietly produces zero, a question is hidden for the
+// whole of fieldwork, and a constraint never rejects anything. Both engines
+// agree perfectly, and both are useless.
+//
+// Nothing in the ecosystem reports this. pyxform and rxform check the
+// spreadsheet's own references; an XPath written out by hand — the root
+// name misspelled, a group renamed, a field deleted — goes straight
+// through.
+
+/// What the form's instance actually contains.
+struct Shape {
+    /// Every element path in the primary instance, without positions.
+    paths: BTreeSet<String>,
+    /// The ids of every `<instance>` the form declares.
+    tables: BTreeSet<String>,
+    /// The primary instance's root element name, for a clearer message when
+    /// the root itself is what was misspelled.
+    root: Option<String>,
+}
+
+impl Shape {
+    fn of(document: &crate::tree::Instance) -> Shape {
+        let mut paths = BTreeSet::new();
+        let mut tables = BTreeSet::new();
+        let mut root_name = None;
+
+        let Some(root) = document.root() else {
+            return Shape {
+                paths,
+                tables,
+                root: None,
+            };
+        };
+        let mut nodes = vec![root];
+        nodes.extend(document.descendants(root));
+
+        let mut primary_seen = false;
+        for node in nodes {
+            if document.node(node).name != "instance" {
+                continue;
+            }
+            let id = document
+                .attributes(node)
+                .into_iter()
+                .find(|a| document.node(*a).name == "id")
+                .map(|a| document.node(a).value.clone());
+            match id {
+                Some(id) => {
+                    tables.insert(id);
+                }
+                None if !primary_seen => {
+                    // The first instance with no id is the primary one.
+                    primary_seen = true;
+                    if let Some(template) = document.children(node).into_iter().next() {
+                        root_name = Some(document.node(template).name.clone());
+                        walk(document, template, "", &mut paths);
+                    }
+                }
+                None => {}
+            }
+        }
+        Shape {
+            paths,
+            tables,
+            root: root_name,
+        }
+    }
+
+    /// Whether a path names anything. Attributes count: `/data/@id` is a
+    /// node a form may legitimately read.
+    fn holds(&self, path: &str) -> bool {
+        let path = path.split('@').next().unwrap_or(path).trim_end_matches('/');
+        self.paths.contains(path)
+    }
+}
+
+fn walk(
+    document: &crate::tree::Instance,
+    node: crate::tree::NodeId,
+    prefix: &str,
+    into: &mut BTreeSet<String>,
+) {
+    let here = format!("{prefix}/{}", document.node(node).name);
+    into.insert(here.clone());
+    for child in document.children(node) {
+        walk(document, child, &here, into);
+    }
+}
+
+/// Report every absolute path in an expression that the instance has no
+/// node for.
+fn check_paths(expr: &Expr, from: &str, shape: &Shape, out: &mut Vec<Finding>) {
+    // A form whose instance could not be read at all would report every
+    // path as missing, which is noise rather than a finding.
+    if shape.paths.is_empty() {
+        return;
+    }
+    let mut wanted = Vec::new();
+    gather(expr, from, true, &mut wanted);
+
+    let mut seen = BTreeSet::new();
+    for path in wanted {
+        if !seen.insert(path.clone()) || shape.holds(&path) {
+            continue;
+        }
+        // A path into a lookup table is checked by its table's name: an
+        // external CSV has no inline shape to check the rest against.
+        let root = path.split('/').nth(1).unwrap_or_default();
+        if shape.tables.contains(root) {
+            continue;
+        }
+
+        // A path that does exist beats a hint about the root: a form
+        // author reading "/data/morador/maior" sees the fix at once.
+        let suggestion = nearest(&path, &shape.paths)
+            .map(|near| near.to_string())
+            .or_else(|| match &shape.root {
+                Some(name) if root != name => Some(format!(
+                    "a path under /{name} — that is this form's instance root, not /{root}"
+                )),
+                _ => None,
+            });
+        out.push((
+            format!("{path}, which this form's instance has no node for"),
+            Breaks::Everywhere,
+            "the path matches nothing, so the rule reads an empty node-set: a calculation \
+             comes out 0, a comparison comes out false, and a relevant hides its question \
+             for the whole of fieldwork"
+                .into(),
+            suggestion,
+        ));
+    }
+}
+
+/// Collect the paths whose meaning does not depend on where they sit.
+///
+/// An absolute path names the same node wherever it appears, so it can
+/// always be checked. A relative one is read from the context node, and
+/// inside a predicate that node is whatever the step selected — in
+/// `instance('linhas')/root/item[name = /data/x]/lote`, `name` is a child
+/// of the table's item and has nothing to do with the bind. Checking it
+/// against the form's own instance reports a fault that is not there, and
+/// a checker that cries wolf gets switched off.
+///
+/// So relative paths are checked only where the context is the bound node:
+/// at the top level of the expression, which is where `../idade` lives.
+fn gather(expr: &Expr, from: &str, at_top: bool, out: &mut Vec<String>) {
+    match expr {
+        Expr::Path { absolute, steps } => {
+            if *absolute || at_top {
+                if let Some(path) = crate::rules::referenced_paths(
+                    &Expr::Path {
+                        absolute: *absolute,
+                        steps: steps.clone(),
+                    },
+                    from,
+                )
+                .into_iter()
+                .next()
+                {
+                    out.push(path);
+                }
+            }
+            for step in steps {
+                for predicate in &step.predicates {
+                    gather(predicate, from, false, out);
+                }
+            }
+        }
+        Expr::Filter {
+            base,
+            predicates,
+            steps,
+        } => {
+            gather(base, from, false, out);
+            for predicate in predicates {
+                gather(predicate, from, false, out);
+            }
+            for step in steps {
+                for predicate in &step.predicates {
+                    gather(predicate, from, false, out);
+                }
+            }
+        }
+        Expr::Function { args, .. } => {
+            for arg in args {
+                gather(arg, from, at_top, out);
+            }
+        }
+        Expr::Binary { left, right, .. } | Expr::Union(left, right) => {
+            gather(left, from, at_top, out);
+            gather(right, from, at_top, out);
+        }
+        Expr::Negate(inner) => gather(inner, from, at_top, out),
+        Expr::Number(_) | Expr::Literal(_) | Expr::Variable(_) => {}
+    }
+}
+
+/// The known path closest to a mistyped one, when there is an obvious
+/// candidate — a suggestion is worth more than a complaint.
+fn nearest<'a>(wanted: &str, known: &'a BTreeSet<String>) -> Option<&'a String> {
+    let leaf = wanted.rsplit('/').next()?;
+    let mut matches = known
+        .iter()
+        .filter(|path| path.ends_with(&format!("/{leaf}")));
+    let first = matches.next()?;
+    // Two candidates and this would be a guess, not a suggestion.
+    match matches.next() {
+        Some(_) => None,
+        None => Some(first),
+    }
 }
