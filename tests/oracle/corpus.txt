@@ -1,0 +1,138 @@
+# Expressions put to both engines. One per line; blank lines and lines
+# starting with # are ignored. Nothing here may depend on the clock or on
+# randomness — the point is that two implementations agree, not that one
+# of them is fast.
+
+# --- paths
+/data/age
+/data/missing
+/data/household/resident/nome
+/data/household/resident[2]/nome
+/data/household/resident[last()]/nome
+/data/household/resident[position() = 2]/idade
+/data/household/resident[idade > 10]/nome
+count(/data/household/resident)
+count(/data/household/resident[idade > 10])
+count(/data/missing)
+count(//idade)
+/data/@id
+/data/@version
+../age
+.
+//nome
+
+# --- string
+string(/data/age)
+string(/data/missing)
+concat("a", "b", "c")
+concat(/data/household/resident/nome, "!")
+string-length(/data/name)
+string-length(/data/blank)
+normalize-space(/data/spaced)
+contains(/data/name, "Silva")
+contains(/data/name, "silva")
+starts-with(/data/name, "Maria")
+ends-with(/data/name, "Silva")
+substring-before(/data/name, " ")
+substring-after(/data/name, " ")
+substring("hello", 2)
+substring("hello", 2, 3)
+substring("hello", 0, 3)
+substring("hello", 1.5, 2.6)
+substr("hello", 2, 3)
+substr("hello", 0, 2)
+substr("hello", -2)
+translate("bar", "abc", "ABC")
+upper-case("abc")
+lower-case("ABC")
+
+# --- number
+1 + 1
+7 div 2
+7 mod 3
+-7 mod 3
+1 div 0
+-1 div 0
+0 div 0
+number("abc")
+number("42")
+number(/data/age)
+number(/data/blank)
+sum(/data/household/resident/idade)
+sum(/data/missing)
+floor(1.9)
+ceiling(1.1)
+round(1.5)
+round(2.5)
+round(-1.5)
+round(1.2345, 2)
+round(1235.5, -2)
+int(1.9)
+int(-1.9)
+abs(-3)
+pow(2, 10)
+min(/data/household/resident/idade)
+max(/data/household/resident/idade)
+min(3, 1, 2)
+max(3, 1, 2)
+
+# --- boolean and comparison
+true()
+false()
+not(true())
+boolean("0")
+boolean("")
+boolean(/data/blank)
+boolean(/data/missing)
+boolean-from-string("0")
+boolean-from-string("1")
+boolean-from-string("true")
+boolean-from-string("TRUE")
+boolean-from-string("no")
+/data/age > 18
+/data/age = 42
+/data/age = "42"
+/data/household/resident/idade = 7
+/data/household/resident/idade != 7
+/data/missing = 0
+/data/missing != 0
+/data/blank = ""
+number("abc") = number("abc")
+number("abc") > 0
+"a" < "b"
+1 < 2 and 2 < 3
+1 > 2 or 2 < 3
+
+# --- OpenRosa
+selected(/data/services, "water")
+selected(/data/services, "wat")
+selected(/data/one_service, "water")
+count-selected(/data/services)
+count-selected(/data/one_service)
+selected-at(/data/services, 0)
+selected-at(/data/services, 1)
+selected-at(/data/services, 5)
+coalesce(/data/blank, "fallback")
+coalesce(/data/age, "fallback")
+if(/data/age > 18, "adult", "child")
+if(/data/blank != "", 1 div 0, -1)
+join(", ", /data/household/resident/nome)
+once(/data/age)
+
+# --- dates
+format-date-time("2026-08-07T06:31:13.834-03:00", "%Y%m%d%H%M%S")
+format-date-time("2026-08-07T06:31:13.834-03:00", "%Y-%m-%d")
+format-date-time("2026-08-07T06:31:13.834-03:00", "%H:%M:%S")
+format-date("2026-01-09", "%Y-%m-%d")
+format-date("2026-01-09", "%e/%n/%y")
+
+# --- regex
+regex("12345678901", "[0-9]{11}")
+regex("12345678901", "^[0-9]{11}$")
+regex("123", "[0-9]{11}")
+regex(/data/cpf, "[0-9]{11}")
+
+# --- cases that separate the two reference implementations
+regex("a12345678901b", "[0-9]{11}")
+regex("abc123", "[0-9]+")
+concat(/data/household/resident/nome)

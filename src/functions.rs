@@ -93,7 +93,23 @@ pub fn call(
                 Ok(Value::String(text(0)?))
             }
         }
+        // ODK extends concat: given a single node-set it joins every value,
+        // which is how a form flattens a repeat into one string. With more
+        // than one argument each converts through string(), and a node-set
+        // among them contributes its first node — XPath's rule, and
+        // JavaRosa's.
         "concat" => {
+            if args.len() == 1 {
+                if let Value::NodeSet(nodes) = arg(0)? {
+                    return Ok(Value::String(
+                        nodes
+                            .iter()
+                            .map(|n| instance.string_value(*n))
+                            .collect::<Vec<_>>()
+                            .join(""),
+                    ));
+                }
+            }
             let mut out = String::new();
             for i in 0..args.len() {
                 out.push_str(&text(i)?);
@@ -236,10 +252,11 @@ pub fn call(
         // here, where XPath calls any non-empty string true.
         "boolean-from-string" => {
             arity(&[1])?;
+            // Case-sensitive, as both reference engines are: "TRUE" is not
+            // true. A form that writes it that way has a bug, and hiding
+            // the bug behind a helpful comparison is worse than the false.
             let value = text(0)?;
-            Ok(Value::Boolean(
-                value == "1" || value.eq_ignore_ascii_case("true"),
-            ))
+            Ok(Value::Boolean(value == "1" || value == "true"))
         }
 
         // ---- number

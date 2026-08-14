@@ -127,16 +127,27 @@ impl Instance {
         self.order.get(&id).copied().unwrap_or(usize::MAX)
     }
 
-    /// The string-value of a node: an element's own text, or an attribute's
-    /// value.
+    /// The string-value of a node: for an element, the concatenation of all
+    /// text below it, in document order; for an attribute, its value.
     ///
-    /// XPath says an element's string-value is the concatenation of all
-    /// descendant text. Instances built by ODK clients hold values only on
-    /// leaves, so the two agree there — but a form asking for the value of a
-    /// group would differ, and this returns the element's own text rather
-    /// than pretending to concatenate.
+    /// Returning only the element's own text is the tempting shortcut, and
+    /// it is right for every leaf — which is every question. It is wrong for
+    /// a group, where XPath says the value is everything underneath, and a
+    /// form that asks for one would silently read an empty string.
+    ///
+    /// Inter-element whitespace is not part of this: the parser keeps
+    /// values, not layout, so a container's value here is its answers run
+    /// together without the indentation a serializer would put between them.
     pub fn string_value(&self, id: NodeId) -> String {
-        self.nodes[id.0].value.clone()
+        let node = &self.nodes[id.0];
+        if node.children.is_empty() {
+            return node.value.clone();
+        }
+        let mut out = node.value.clone();
+        for descendant in self.descendants(id) {
+            out.push_str(&self.nodes[descendant.0].value);
+        }
+        out
     }
 
     /// Children of an element, elements only.

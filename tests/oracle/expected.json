@@ -1,0 +1,619 @@
+{
+  "/data/age": {
+    "type": "nodeset",
+    "value": [
+      "42"
+    ],
+    "via": "openrosa"
+  },
+  "/data/missing": {
+    "type": "nodeset",
+    "value": [],
+    "via": "openrosa"
+  },
+  "/data/household/resident/nome": {
+    "type": "nodeset",
+    "value": [
+      "Ana",
+      "Bia",
+      "Caio"
+    ],
+    "via": "openrosa"
+  },
+  "/data/household/resident[2]/nome": {
+    "type": "nodeset",
+    "value": [
+      "Bia"
+    ],
+    "via": "native-xpath"
+  },
+  "/data/household/resident[last()]/nome": {
+    "type": "nodeset",
+    "value": [
+      "Caio"
+    ],
+    "via": "native-xpath"
+  },
+  "/data/household/resident[position() = 2]/idade": {
+    "type": "nodeset",
+    "value": [
+      "7"
+    ],
+    "via": "native-xpath"
+  },
+  "/data/household/resident[idade > 10]/nome": {
+    "type": "nodeset",
+    "value": [
+      "Ana",
+      "Caio"
+    ],
+    "via": "native-xpath"
+  },
+  "count(/data/household/resident)": {
+    "type": "number",
+    "value": 3,
+    "via": "openrosa"
+  },
+  "count(/data/household/resident[idade > 10])": {
+    "type": "number",
+    "value": 2,
+    "via": "openrosa"
+  },
+  "count(/data/missing)": {
+    "type": "number",
+    "value": 0,
+    "via": "openrosa"
+  },
+  "count(//idade)": {
+    "type": "number",
+    "value": 3,
+    "via": "openrosa"
+  },
+  "/data/@id": {
+    "type": "nodeset",
+    "value": [
+      "oracle"
+    ],
+    "via": "openrosa"
+  },
+  "/data/@version": {
+    "type": "nodeset",
+    "value": [
+      "1"
+    ],
+    "via": "openrosa"
+  },
+  "../age": {
+    "type": "nodeset",
+    "value": [],
+    "via": "openrosa"
+  },
+  ".": {
+    "type": "nodeset",
+    "value": [
+      "\n  42\n  1500.5\n  0\n  -7\n  yes\n  Maria da Silva\n    padded  \n  water power\n  water\n  \n  2026-08-07\n  2026-08-07T06:31:13.834-03:00\n  12345678901\n  \n    Ana34\n    Bia7\n    Caio19\n  \n"
+    ],
+    "via": "openrosa"
+  },
+  "//nome": {
+    "type": "nodeset",
+    "value": [
+      "Ana",
+      "Bia",
+      "Caio"
+    ],
+    "via": "openrosa"
+  },
+  "string(/data/age)": {
+    "type": "string",
+    "value": "42",
+    "via": "openrosa"
+  },
+  "string(/data/missing)": {
+    "type": "string",
+    "value": "",
+    "via": "openrosa"
+  },
+  "concat(\"a\", \"b\", \"c\")": {
+    "type": "string",
+    "value": "abc",
+    "via": "openrosa"
+  },
+  "concat(/data/household/resident/nome, \"!\")": {
+    "type": "string",
+    "value": "AnaBiaCaio!",
+    "via": "openrosa"
+  },
+  "string-length(/data/name)": {
+    "type": "number",
+    "value": 14,
+    "via": "openrosa"
+  },
+  "string-length(/data/blank)": {
+    "type": "number",
+    "value": 0,
+    "via": "openrosa"
+  },
+  "normalize-space(/data/spaced)": {
+    "type": "string",
+    "value": "padded",
+    "via": "openrosa"
+  },
+  "contains(/data/name, \"Silva\")": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "contains(/data/name, \"silva\")": {
+    "type": "boolean",
+    "value": false,
+    "via": "openrosa"
+  },
+  "starts-with(/data/name, \"Maria\")": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "ends-with(/data/name, \"Silva\")": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "substring-before(/data/name, \" \")": {
+    "type": "string",
+    "value": "Maria",
+    "via": "openrosa"
+  },
+  "substring-after(/data/name, \" \")": {
+    "type": "string",
+    "value": "da Silva",
+    "via": "openrosa"
+  },
+  "substring(\"hello\", 2)": {
+    "type": "string",
+    "value": "ello",
+    "via": "openrosa"
+  },
+  "substring(\"hello\", 2, 3)": {
+    "type": "string",
+    "value": "ell",
+    "via": "openrosa"
+  },
+  "substring(\"hello\", 0, 3)": {
+    "type": "string",
+    "value": "o",
+    "via": "openrosa"
+  },
+  "substring(\"hello\", 1.5, 2.6)": {
+    "type": "string",
+    "value": "ell",
+    "via": "openrosa"
+  },
+  "substr(\"hello\", 2, 3)": {
+    "type": "string",
+    "value": "l",
+    "via": "openrosa"
+  },
+  "substr(\"hello\", 0, 2)": {
+    "type": "string",
+    "value": "he",
+    "via": "openrosa"
+  },
+  "substr(\"hello\", -2)": {
+    "type": "string",
+    "value": "lo",
+    "via": "openrosa"
+  },
+  "translate(\"bar\", \"abc\", \"ABC\")": {
+    "type": "string",
+    "value": "BAr",
+    "via": "openrosa"
+  },
+  "upper-case(\"abc\")": {
+    "type": "error",
+    "value": "Unknown function: upper-case",
+    "native": "Unknown function: upper-case",
+    "via": "both-refused"
+  },
+  "lower-case(\"ABC\")": {
+    "type": "error",
+    "value": "Unknown function: lower-case",
+    "native": "Unknown function: lower-case",
+    "via": "both-refused"
+  },
+  "1 + 1": {
+    "type": "number",
+    "value": 2,
+    "via": "openrosa"
+  },
+  "7 div 2": {
+    "type": "number",
+    "value": 3.5,
+    "via": "openrosa"
+  },
+  "7 mod 3": {
+    "type": "number",
+    "value": 1,
+    "via": "openrosa"
+  },
+  "-7 mod 3": {
+    "type": "number",
+    "value": -1,
+    "via": "openrosa"
+  },
+  "1 div 0": {
+    "type": "number",
+    "value": "Infinity",
+    "via": "openrosa"
+  },
+  "-1 div 0": {
+    "type": "number",
+    "value": "-Infinity",
+    "via": "openrosa"
+  },
+  "0 div 0": {
+    "type": "number",
+    "value": "NaN",
+    "via": "openrosa"
+  },
+  "number(\"abc\")": {
+    "type": "number",
+    "value": "NaN",
+    "via": "openrosa"
+  },
+  "number(\"42\")": {
+    "type": "number",
+    "value": 42,
+    "via": "openrosa"
+  },
+  "number(/data/age)": {
+    "type": "number",
+    "value": 42,
+    "via": "openrosa"
+  },
+  "number(/data/blank)": {
+    "type": "number",
+    "value": "NaN",
+    "via": "openrosa"
+  },
+  "sum(/data/household/resident/idade)": {
+    "type": "number",
+    "value": 60,
+    "via": "openrosa"
+  },
+  "sum(/data/missing)": {
+    "type": "number",
+    "value": 0,
+    "via": "openrosa"
+  },
+  "floor(1.9)": {
+    "type": "number",
+    "value": 1,
+    "via": "openrosa"
+  },
+  "ceiling(1.1)": {
+    "type": "number",
+    "value": 2,
+    "via": "openrosa"
+  },
+  "round(1.5)": {
+    "type": "number",
+    "value": 2,
+    "via": "openrosa"
+  },
+  "round(2.5)": {
+    "type": "number",
+    "value": 3,
+    "via": "openrosa"
+  },
+  "round(-1.5)": {
+    "type": "number",
+    "value": -2,
+    "via": "openrosa"
+  },
+  "round(1.2345, 2)": {
+    "type": "number",
+    "value": 1.23,
+    "via": "openrosa"
+  },
+  "round(1235.5, -2)": {
+    "type": "number",
+    "value": 1200,
+    "via": "openrosa"
+  },
+  "int(1.9)": {
+    "type": "number",
+    "value": 1,
+    "via": "openrosa"
+  },
+  "int(-1.9)": {
+    "type": "number",
+    "value": -1,
+    "via": "openrosa"
+  },
+  "abs(-3)": {
+    "type": "number",
+    "value": 3,
+    "via": "openrosa"
+  },
+  "pow(2, 10)": {
+    "type": "number",
+    "value": 1024,
+    "via": "openrosa"
+  },
+  "min(/data/household/resident/idade)": {
+    "type": "number",
+    "value": 7,
+    "via": "openrosa"
+  },
+  "max(/data/household/resident/idade)": {
+    "type": "number",
+    "value": 34,
+    "via": "openrosa"
+  },
+  "min(3, 1, 2)": {
+    "type": "number",
+    "value": 1,
+    "via": "openrosa"
+  },
+  "max(3, 1, 2)": {
+    "type": "number",
+    "value": 3,
+    "via": "openrosa"
+  },
+  "true()": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "false()": {
+    "type": "boolean",
+    "value": false,
+    "via": "openrosa"
+  },
+  "not(true())": {
+    "type": "boolean",
+    "value": false,
+    "via": "openrosa"
+  },
+  "boolean(\"0\")": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "boolean(\"\")": {
+    "type": "boolean",
+    "value": false,
+    "via": "openrosa"
+  },
+  "boolean(/data/blank)": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "boolean(/data/missing)": {
+    "type": "boolean",
+    "value": false,
+    "via": "openrosa"
+  },
+  "boolean-from-string(\"0\")": {
+    "type": "boolean",
+    "value": false,
+    "via": "openrosa"
+  },
+  "boolean-from-string(\"1\")": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "boolean-from-string(\"true\")": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "boolean-from-string(\"TRUE\")": {
+    "type": "boolean",
+    "value": false,
+    "via": "openrosa"
+  },
+  "boolean-from-string(\"no\")": {
+    "type": "boolean",
+    "value": false,
+    "via": "openrosa"
+  },
+  "/data/age > 18": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "/data/age = 42": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "/data/age = \"42\"": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "/data/household/resident/idade = 7": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "/data/household/resident/idade != 7": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "/data/missing = 0": {
+    "type": "boolean",
+    "value": false,
+    "via": "openrosa"
+  },
+  "/data/missing != 0": {
+    "type": "boolean",
+    "value": false,
+    "via": "openrosa"
+  },
+  "/data/blank = \"\"": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "number(\"abc\") = number(\"abc\")": {
+    "type": "boolean",
+    "value": false,
+    "via": "openrosa"
+  },
+  "number(\"abc\") > 0": {
+    "type": "boolean",
+    "value": false,
+    "via": "openrosa"
+  },
+  "\"a\" < \"b\"": {
+    "type": "boolean",
+    "value": false,
+    "via": "openrosa"
+  },
+  "1 < 2 and 2 < 3": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "1 > 2 or 2 < 3": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "selected(/data/services, \"water\")": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "selected(/data/services, \"wat\")": {
+    "type": "boolean",
+    "value": false,
+    "via": "openrosa"
+  },
+  "selected(/data/one_service, \"water\")": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "count-selected(/data/services)": {
+    "type": "number",
+    "value": 2,
+    "via": "openrosa"
+  },
+  "count-selected(/data/one_service)": {
+    "type": "number",
+    "value": 1,
+    "via": "openrosa"
+  },
+  "selected-at(/data/services, 0)": {
+    "type": "string",
+    "value": "water",
+    "via": "openrosa"
+  },
+  "selected-at(/data/services, 1)": {
+    "type": "string",
+    "value": "power",
+    "via": "openrosa"
+  },
+  "selected-at(/data/services, 5)": {
+    "type": "string",
+    "value": "",
+    "via": "openrosa"
+  },
+  "coalesce(/data/blank, \"fallback\")": {
+    "type": "string",
+    "value": "fallback",
+    "via": "openrosa"
+  },
+  "coalesce(/data/age, \"fallback\")": {
+    "type": "string",
+    "value": "42",
+    "via": "openrosa"
+  },
+  "if(/data/age > 18, \"adult\", \"child\")": {
+    "type": "string",
+    "value": "adult",
+    "via": "openrosa"
+  },
+  "if(/data/blank != \"\", 1 div 0, -1)": {
+    "type": "number",
+    "value": -1,
+    "via": "openrosa"
+  },
+  "join(\", \", /data/household/resident/nome)": {
+    "type": "string",
+    "value": "Ana, Bia, Caio",
+    "via": "openrosa"
+  },
+  "once(/data/age)": {
+    "type": "string",
+    "value": "\n  42\n  1500.5\n  0\n  -7\n  yes\n  Maria da Silva\n    padded  \n  water power\n  water\n  \n  2026-08-07\n  2026-08-07T06:31:13.834-03:00\n  12345678901\n  \n    Ana34\n    Bia7\n    Caio19\n  \n",
+    "via": "openrosa"
+  },
+  "format-date-time(\"2026-08-07T06:31:13.834-03:00\", \"%Y%m%d%H%M%S\")": {
+    "type": "string",
+    "value": "20260807063113",
+    "via": "openrosa"
+  },
+  "format-date-time(\"2026-08-07T06:31:13.834-03:00\", \"%Y-%m-%d\")": {
+    "type": "string",
+    "value": "2026-08-07",
+    "via": "openrosa"
+  },
+  "format-date-time(\"2026-08-07T06:31:13.834-03:00\", \"%H:%M:%S\")": {
+    "type": "string",
+    "value": "06:31:13",
+    "via": "openrosa"
+  },
+  "format-date(\"2026-01-09\", \"%Y-%m-%d\")": {
+    "type": "string",
+    "value": "2026-01-09",
+    "via": "openrosa"
+  },
+  "format-date(\"2026-01-09\", \"%e/%n/%y\")": {
+    "type": "string",
+    "value": "9/1/26",
+    "via": "openrosa"
+  },
+  "regex(\"12345678901\", \"[0-9]{11}\")": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "regex(\"12345678901\", \"^[0-9]{11}$\")": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "regex(\"123\", \"[0-9]{11}\")": {
+    "type": "boolean",
+    "value": false,
+    "via": "openrosa"
+  },
+  "regex(/data/cpf, \"[0-9]{11}\")": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "regex(\"a12345678901b\", \"[0-9]{11}\")": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "regex(\"abc123\", \"[0-9]+\")": {
+    "type": "boolean",
+    "value": true,
+    "via": "openrosa"
+  },
+  "concat(/data/household/resident/nome)": {
+    "type": "string",
+    "value": "AnaBiaCaio",
+    "via": "openrosa"
+  }
+}

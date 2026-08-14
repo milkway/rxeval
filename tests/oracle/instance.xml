@@ -1,0 +1,20 @@
+<data id="oracle" version="1">
+  <age>42</age>
+  <income>1500.5</income>
+  <zero>0</zero>
+  <negative>-7</negative>
+  <consent>yes</consent>
+  <name>Maria da Silva</name>
+  <spaced>  padded  </spaced>
+  <services>water power</services>
+  <one_service>water</one_service>
+  <blank/>
+  <date>2026-08-07</date>
+  <stamp>2026-08-07T06:31:13.834-03:00</stamp>
+  <cpf>12345678901</cpf>
+  <household>
+    <resident><nome>Ana</nome><idade>34</idade></resident>
+    <resident><nome>Bia</nome><idade>7</idade></resident>
+    <resident><nome>Caio</nome><idade>19</idade></resident>
+  </household>
+</data>
