@@ -31,6 +31,13 @@ pub struct Session {
     form: Form,
     instance: Instance,
     clock: Clock,
+    /// One blank row per repeat, by the repeat's path.
+    ///
+    /// An XForm carries these inside the instance, marked `jr:template`.
+    /// They are a form's blueprint and not a respondent's answer, so they
+    /// are lifted out here: left in place they would be counted as a row,
+    /// validated as a row, and submitted as a row of empty answers.
+    templates: BTreeMap<String, Instance>,
 }
 
 /// What the engine says about the form as it currently stands.
@@ -53,29 +60,40 @@ pub struct Outcome {
     /// enumerator can fix an answer and can do nothing about a broken
     /// `relevant`.
     pub failed: Vec<(String, String)>,
+    /// How many rows each repeat has, by the repeat's path.
+    pub repeats: BTreeMap<String, usize>,
 }
 
 impl Session {
     /// Start filling in a form, from the XForm the server serves.
     pub fn new(xform: &str, clock: Clock) -> Result<Self, String> {
         let form = Form::parse(xform)?;
-        let instance = blank_instance(xform)?;
+        let mut instance = blank_instance(xform)?;
+        let templates = lift_templates(&mut instance);
         Ok(Session {
             form,
             instance,
             clock,
+            templates,
         })
     }
 
     /// Resume a partly-filled form.
     pub fn resume(xform: &str, instance_xml: &str, clock: Clock) -> Result<Self, String> {
         let form = Form::parse(xform)?;
-        let instance =
+        let mut instance =
             Instance::from_xml(instance_xml).map_err(|e| format!("saved instance: {e}"))?;
+        // A saved instance has no templates — they were lifted before it was
+        // ever shown — so they come from the form, which is where they
+        // belong anyway.
+        let mut blank = blank_instance(xform)?;
+        let templates = lift_templates(&mut blank);
+        let _ = lift_templates(&mut instance);
         Ok(Session {
             form,
             instance,
             clock,
+            templates,
         })
     }
 
@@ -155,7 +173,91 @@ impl Session {
                 Calculation { .. } => {}
             }
         }
+        outcome.repeats = self.repeat_counts();
         outcome
+    }
+
+    /// How many rows each repeat currently has.
+    ///
+    /// A repeat with no rows is a real state — the form asked for a list and
+    /// the list is empty — and it is different from a repeat whose single
+    /// row is blank.
+    pub fn repeat_counts(&self) -> BTreeMap<String, usize> {
+        let mut counts = BTreeMap::new();
+        for path in self.templates.keys() {
+            counts.insert(path.clone(), self.rows_of(path).len());
+        }
+        counts
+    }
+
+    /// Add a row to a repeat. Returns how many rows there are now.
+    ///
+    /// The row is a copy of the form's own template, placed after the last
+    /// existing row rather than at the end of its parent: appended blindly
+    /// it would land after `meta` and after every question that follows the
+    /// repeat, putting both the submission and every positional path out of
+    /// order.
+    pub fn add_row(&mut self, path: &str) -> Result<usize, String> {
+        let template = self
+            .templates
+            .get(path)
+            .ok_or_else(|| format!("'{path}' is not a repeat in this form"))?
+            .clone();
+        let template_root = template
+            .root()
+            .ok_or_else(|| format!("the template for '{path}' is empty"))?;
+
+        let rows = self.rows_of(path);
+        let copied = self.instance.adopt(&template, template_root);
+        match rows.last() {
+            Some(last) => self.instance.insert_after(*last, copied),
+            None => {
+                // No rows yet: the row goes where the repeat itself sits in
+                // the form, which is under the parent the path names.
+                let parent_path = path.rsplit_once('/').map(|(head, _)| head).unwrap_or("");
+                let parent = match parent_path {
+                    "" => self.instance.root(),
+                    other => self.node_at(other),
+                }
+                .ok_or_else(|| format!("'{path}' has nowhere to hang"))?;
+                self.instance.append_child(parent, copied);
+            }
+        }
+        self.instance.reindex();
+        Ok(self.rows_of(path).len())
+    }
+
+    /// Remove one row, counted from 1 as XPath counts.
+    pub fn remove_row(&mut self, path: &str, position: usize) -> Result<usize, String> {
+        let rows = self.rows_of(path);
+        if position == 0 || position > rows.len() {
+            return Err(format!(
+                "'{path}' has {} row(s); there is no row {position}",
+                rows.len()
+            ));
+        }
+        self.instance.detach(rows[position - 1]);
+        self.instance.reindex();
+        Ok(self.rows_of(path).len())
+    }
+
+    /// The nodes that are the rows of a repeat, in document order.
+    fn rows_of(&self, path: &str) -> Vec<NodeId> {
+        let Some((parent_path, name)) = path.rsplit_once('/') else {
+            return Vec::new();
+        };
+        let parent = match parent_path {
+            "" => self.instance.root(),
+            other => self.node_at(other),
+        };
+        let Some(parent) = parent else {
+            return Vec::new();
+        };
+        self.instance
+            .children(parent)
+            .into_iter()
+            .filter(|child| self.instance.node(*child).name == name)
+            .collect()
     }
 
     /// The choices a question offers right now.
@@ -296,4 +398,53 @@ fn escape_into(text: &str, out: &mut String) {
             _ => out.push(c),
         }
     }
+}
+
+/// Take the `jr:template` rows out of an instance, keyed by their path.
+///
+/// The attribute arrives here as `template`: the parser keeps local names,
+/// and instances are single-namespace in practice.
+fn lift_templates(instance: &mut Instance) -> BTreeMap<String, Instance> {
+    let mut found = BTreeMap::new();
+    let Some(root) = instance.root() else {
+        return found;
+    };
+    let templates: Vec<NodeId> = instance
+        .descendants(root)
+        .into_iter()
+        .filter(|node| {
+            instance
+                .attributes(*node)
+                .into_iter()
+                .any(|a| instance.node(a).name == "template")
+        })
+        .collect();
+
+    for node in templates {
+        // The path is taken before detaching, and without the position: a
+        // template is the blueprint for every row, not for one of them.
+        let path = instance.path_of(node);
+        let path = match path.rfind('[') {
+            Some(at) if path.ends_with(']') => path[..at].to_string(),
+            _ => path,
+        };
+        let mut lifted = Instance::new();
+        let copied = lifted.adopt(instance, node);
+        lifted.set_root(copied);
+        // The copy carries the marker; a row made from it must not, or the
+        // next lift would take the row for a template.
+        let markers: Vec<NodeId> = lifted
+            .attributes(copied)
+            .into_iter()
+            .filter(|a| lifted.node(*a).name == "template")
+            .collect();
+        lifted
+            .node_mut(copied)
+            .attributes
+            .retain(|a| !markers.contains(a));
+        found.insert(path, lifted);
+        instance.detach(node);
+    }
+    instance.reindex();
+    found
 }

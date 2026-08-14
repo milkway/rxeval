@@ -194,3 +194,157 @@ fn a_translated_message_arrives_translated() {
         )]
     );
 }
+
+// ---------------------------------------------------------------------------
+// Repeats
+// ---------------------------------------------------------------------------
+
+const HOUSEHOLD: &str = r#"<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <model>
+      <instance>
+        <data id="household">
+          <chefe/>
+          <morador jr:template="">
+            <nome/>
+            <idade/>
+            <maior/>
+            <trabalha/>
+          </morador>
+          <morador>
+            <nome/>
+            <idade/>
+            <maior/>
+            <trabalha/>
+          </morador>
+          <total_adultos/>
+          <meta><instanceID/></meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/morador/nome" type="string" required="true()"/>
+      <bind nodeset="/data/morador/idade" type="int" required="true()"/>
+      <bind nodeset="/data/morador/maior" type="int" calculate="if(../idade &gt;= 18, 1, 0)"/>
+      <bind nodeset="/data/morador/trabalha" type="string" relevant="../idade &gt;= 14"/>
+      <bind nodeset="/data/total_adultos" type="int" calculate="sum(/data/morador/maior)"/>
+    </model>
+  </h:head>
+  <h:body><repeat nodeset="/data/morador"/></h:body>
+</h:html>"#;
+
+/// The template is the form's blueprint, not somebody's answer.
+///
+/// Left in the instance it counts as a row, validates as a row, and is
+/// submitted as a row of blanks — an extra resident in every household.
+#[test]
+fn the_blueprint_row_is_not_a_row() {
+    let session = Session::new(HOUSEHOLD, clock()).unwrap();
+    assert_eq!(session.repeat_counts().get("/data/morador"), Some(&1));
+    let xml = session.instance_xml();
+    assert!(!xml.contains("template"), "{xml}");
+}
+
+/// Each row calculates for itself. Before positional paths existed, all
+/// rows shared one path, so one row's answer decided every row's result.
+#[test]
+fn each_row_is_its_own() {
+    let mut session = Session::new(HOUSEHOLD, clock()).unwrap();
+    session.add_row("/data/morador").unwrap();
+    assert_eq!(session.add_row("/data/morador").unwrap(), 3);
+
+    session.set("/data/morador[1]/idade", "40").unwrap();
+    session.set("/data/morador[2]/idade", "9").unwrap();
+    session.set("/data/morador[3]/idade", "22").unwrap();
+    let outcome = session.recompute();
+
+    assert_eq!(session.get("/data/morador[1]/maior"), "1");
+    assert_eq!(session.get("/data/morador[2]/maior"), "0");
+    assert_eq!(session.get("/data/morador[3]/maior"), "1");
+    // and the total reads all three
+    assert_eq!(session.get("/data/total_adultos"), "2");
+
+    // relevance is per row too: a nine-year-old is not asked about work
+    assert_eq!(
+        outcome.relevant.get("/data/morador[2]/trabalha"),
+        Some(&false)
+    );
+    assert_eq!(
+        outcome.relevant.get("/data/morador[3]/trabalha"),
+        Some(&true)
+    );
+
+    // and so is a missing answer: three rows, three unanswered names
+    let missing: Vec<&String> = outcome
+        .missing
+        .iter()
+        .filter(|p| p.ends_with("/nome"))
+        .collect();
+    assert_eq!(missing.len(), 3, "{:?}", outcome.missing);
+}
+
+/// A new row lands among its own kind, not at the end of the document.
+#[test]
+fn a_new_row_goes_where_rows_go() {
+    let mut session = Session::new(HOUSEHOLD, clock()).unwrap();
+    session.add_row("/data/morador").unwrap();
+    session.set("/data/chefe", "Ana").unwrap();
+    session.set("/data/morador[2]/nome", "Bia").unwrap();
+
+    let xml = session.instance_xml();
+    let moradores = xml.find("<morador>").unwrap();
+    let total = xml.find("<total_adultos").unwrap();
+    let meta = xml.find("<meta>").unwrap();
+    assert!(moradores < total && total < meta, "{xml}");
+    assert_eq!(xml.matches("<morador>").count(), 2, "{xml}");
+    // and it is a blank row, not a copy of the one before it
+    assert!(xml.contains("<nome>Bia</nome>"), "{xml}");
+}
+
+/// Removing a row removes that row, and the ones after it move up — which
+/// is what makes a positional path mean anything after an edit.
+#[test]
+fn removing_a_row_renumbers_the_rest() {
+    let mut session = Session::new(HOUSEHOLD, clock()).unwrap();
+    session.add_row("/data/morador").unwrap();
+    session.add_row("/data/morador").unwrap();
+    session.set("/data/morador[1]/nome", "Ana").unwrap();
+    session.set("/data/morador[2]/nome", "Bia").unwrap();
+    session.set("/data/morador[3]/nome", "Cid").unwrap();
+
+    assert_eq!(session.remove_row("/data/morador", 2).unwrap(), 2);
+    assert_eq!(session.get("/data/morador[1]/nome"), "Ana");
+    assert_eq!(session.get("/data/morador[2]/nome"), "Cid");
+    assert!(!session.instance_xml().contains("Bia"));
+
+    assert!(session.remove_row("/data/morador", 9).is_err());
+}
+
+/// A form put down mid-interview comes back with the same rows.
+#[test]
+fn rows_survive_being_put_down() {
+    let mut session = Session::new(HOUSEHOLD, clock()).unwrap();
+    session.add_row("/data/morador").unwrap();
+    session.set("/data/morador[1]/idade", "40").unwrap();
+    session.set("/data/morador[2]/idade", "9").unwrap();
+    session.recompute();
+    let saved = session.instance_xml();
+
+    let mut resumed = Session::resume(HOUSEHOLD, &saved, clock()).unwrap();
+    assert_eq!(resumed.repeat_counts().get("/data/morador"), Some(&2));
+    assert_eq!(resumed.get("/data/morador[2]/idade"), "9");
+    // and it can still grow, which needs the template the saved instance
+    // never carried
+    assert_eq!(resumed.add_row("/data/morador").unwrap(), 3);
+}
+
+/// The verdict says how many rows there are, because the page that draws
+/// them has no other way to know — and a count that is never reported is a
+/// repeat that never appears.
+#[test]
+fn the_verdict_counts_the_rows() {
+    let mut session = Session::new(HOUSEHOLD, clock()).unwrap();
+    assert_eq!(session.recompute().repeats.get("/data/morador"), Some(&1));
+    session.add_row("/data/morador").unwrap();
+    assert_eq!(session.recompute().repeats.get("/data/morador"), Some(&2));
+    session.remove_row("/data/morador", 1).unwrap();
+    assert_eq!(session.recompute().repeats.get("/data/morador"), Some(&1));
+}

@@ -188,16 +188,73 @@ impl Instance {
         out
     }
 
-    /// Absolute path of a node, as a form would write it.
+    /// The path that names this node and no other.
+    ///
+    /// A repeat is several elements with one name, so a bare path names all
+    /// of them at once — and a map keyed by it keeps one row and loses the
+    /// rest. Where a name repeats among siblings, the position is written
+    /// out the way XPath does: `/data/morador[2]/idade`.
+    ///
+    /// The index appears only where it distinguishes something, so a form
+    /// without repeats reads exactly as before.
     pub fn path_of(&self, id: NodeId) -> String {
         let mut parts: Vec<String> = Vec::new();
         let mut current = Some(id);
         while let Some(node) = current {
-            parts.push(self.nodes[node.0].name.clone());
+            let name = &self.nodes[node.0].name;
+            let step = match self.nodes[node.0].parent {
+                Some(parent) => {
+                    let twins: Vec<NodeId> = self.nodes[parent.0]
+                        .children
+                        .iter()
+                        .copied()
+                        .filter(|child| self.nodes[child.0].name == *name)
+                        .collect();
+                    match twins.len() {
+                        0 | 1 => name.clone(),
+                        _ => {
+                            let position = twins.iter().position(|c| *c == node).unwrap_or(0) + 1;
+                            format!("{name}[{position}]")
+                        }
+                    }
+                }
+                None => name.clone(),
+            };
+            parts.push(step);
             current = self.nodes[node.0].parent;
         }
         parts.reverse();
         format!("/{}", parts.join("/"))
+    }
+
+    /// Put `child` immediately after `sibling`, rather than at the end.
+    ///
+    /// A new repeat row belongs among its own kind: appended at the end it
+    /// would sit after `meta` and after every question that follows the
+    /// repeat, and both the submission and every positional path would be
+    /// in the wrong order.
+    pub fn insert_after(&mut self, sibling: NodeId, child: NodeId) {
+        let Some(parent) = self.nodes[sibling.0].parent else {
+            return;
+        };
+        self.nodes[child.0].parent = Some(parent);
+        let at = self.nodes[parent.0]
+            .children
+            .iter()
+            .position(|c| *c == sibling)
+            .map(|i| i + 1)
+            .unwrap_or(self.nodes[parent.0].children.len());
+        self.nodes[parent.0].children.insert(at, child);
+    }
+
+    /// Detach a node from its parent. The node stays in the arena — ids
+    /// elsewhere do not shift — but it is no longer part of the document.
+    pub fn detach(&mut self, id: NodeId) {
+        let Some(parent) = self.nodes[id.0].parent else {
+            return;
+        };
+        self.nodes[parent.0].children.retain(|c| *c != id);
+        self.nodes[id.0].parent = None;
     }
 
     /// Build an instance from submission XML.
@@ -400,7 +457,11 @@ mod tests {
         let children = instance.children(root);
         assert_eq!(children.len(), 3);
         assert_eq!(instance.string_value(children[0]), "1");
-        assert_eq!(instance.path_of(children[2]), "/data/a");
+        // Two elements named `a`, so the path says which one. A repeat is
+        // exactly this shape, and a path that named both would key a map by
+        // a name that is not unique.
+        assert_eq!(instance.path_of(children[0]), "/data/a[1]");
+        assert_eq!(instance.path_of(children[2]), "/data/a[2]");
 
         let b = instance.children(children[1])[0];
         assert_eq!(instance.path_of(b), "/data/g/b");
