@@ -8,6 +8,9 @@ repository.workspace = true
 authors.workspace = true
 keywords = ["odk", "xforms", "xpath", "openrosa", "survey"]
 categories = ["parser-implementations"]
+readme = "README.md"
+# The edition and the let-else / is_some_and this crate uses.
+rust-version = "1.75"
 
 [features]
 default = ["regex"]
