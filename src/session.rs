@@ -304,6 +304,17 @@ impl Session {
         if parts.is_empty() {
             return Err(format!("'{path}' names nothing"));
         }
+        // A positional step names a row that exists. If it did not resolve,
+        // the row is not there — and creating one would mean inventing an
+        // element literally called `morador[3]`, which is not a name, and
+        // producing a submission no parser will accept. Rows come from
+        // `add_row`, which copies the form's own template.
+        if let Some(indexed) = parts.iter().find(|part| part.contains('[')) {
+            return Err(format!(
+                "'{path}' points at {indexed}, which does not exist — add the row first \
+                 with add_row()"
+            ));
+        }
         let leaf = parts.pop().expect("checked above");
         let mut here = self
             .instance

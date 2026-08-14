@@ -1,0 +1,35 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "rxeval"
+description = "Run the logic inside an ODK/OpenRosa XForm — relevant, constraint, required, calculate — and check whether it will behave the same on a tablet and in a browser"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "André Leite", email = "leite@de.ufpe.br" }]
+requires-python = ">=3.8"
+keywords = ["odk", "xforms", "xpath", "openrosa", "survey", "xlsform", "javarosa", "enketo"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: BSD License",
+  "Programming Language :: Rust",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Text Processing :: Markup :: XML",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://milkway.github.io/rxeval/"
+Repository = "https://github.com/milkway/rxeval"
+Issues = "https://github.com/milkway/rxeval/issues"
+Changelog = "https://github.com/milkway/rxeval/releases"
+
+[tool.maturin]
+# The crate lives here; the module it produces is `rxeval`.
+manifest-path = "Cargo.toml"
+features = ["pyo3/extension-module"]
+strip = true

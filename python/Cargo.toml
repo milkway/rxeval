@@ -1,0 +1,35 @@
+# The Python binding, built by maturin.
+#
+# Its own workspace, like the R one: this crate is a cdylib for a Python
+# interpreter and has nothing to say about how the engine itself is built.
+[workspace]
+
+[package]
+name = "rxeval-python"
+version = "0.1.0"
+description = "Python bindings for rxeval: run the logic inside an ODK/OpenRosa XForm"
+edition = "2021"
+license = "BSD-2-Clause"
+repository = "https://github.com/milkway/rxeval"
+authors = ["André Leite <leite@de.ufpe.br>"]
+publish = false
+
+[lib]
+name = "rxeval"
+crate-type = ["cdylib"]
+
+[dependencies]
+# Aliased: the library this crate produces is itself called `rxeval`,
+# because that is the Python module's name, and the two would otherwise
+# shadow each other.
+engine = { package = "rxeval", version = "0.1", path = ".." }
+# abi3-py38: one wheel per platform serves every Python from 3.8 up, rather
+# than one per interpreter version. The cost is the stable ABI's smaller
+# surface, which a binding this shape never touches.
+pyo3 = { version = "0.23", features = ["extension-module", "abi3-py38"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true

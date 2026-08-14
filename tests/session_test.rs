@@ -493,3 +493,26 @@ fn a_shape_closes_itself() {
     assert_eq!(session.get("/data/a"), session.get("/data/f"));
     assert!(session.get("/data/a").parse::<f64>().unwrap() > 1_000_000.0);
 }
+
+/// A positional path names a row that exists.
+///
+/// Answering `/data/morador[3]/idade` when there are two rows used to
+/// create an element called `morador[3]` — not a name, and a submission no
+/// parser will accept. Found from Python, on the first call that reached
+/// past the end.
+#[test]
+fn a_row_that_is_not_there_is_an_error_and_not_an_invention() {
+    let mut session = Session::new(HOUSEHOLD, clock()).unwrap();
+    assert_eq!(session.repeat_counts().get("/data/morador"), Some(&1));
+
+    let refused = session.set("/data/morador[3]/idade", "22").unwrap_err();
+    assert!(refused.contains("morador[3]"), "{refused}");
+    assert!(refused.contains("add_row"), "{refused}");
+    assert!(!session.instance_xml().contains("morador["), "{}", session.instance_xml());
+
+    // and with the rows there, it lands where it was asked to
+    session.add_row("/data/morador").unwrap();
+    session.add_row("/data/morador").unwrap();
+    session.set("/data/morador[3]/idade", "22").unwrap();
+    assert_eq!(session.get("/data/morador[3]/idade"), "22");
+}
