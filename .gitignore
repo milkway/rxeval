@@ -1,4 +1,7 @@
-/target
+# `target/` and not `/target`: the Rust output appears under python/ and
+# r-package/ too, and the anchored form let 600 build artefacts into a
+# public repository before anyone looked.
+target/
 Cargo.lock
 node_modules/
 # fetched with Maven for the JavaRosa side of the oracle; never committed
