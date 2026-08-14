@@ -221,7 +221,10 @@ impl Instance {
             if xml[i..].starts_with("<?") || xml[i..].starts_with("<!") {
                 continue;
             }
-            let end = xml[i..].find('>').ok_or("unterminated tag")? + i;
+            // Find the tag's end while respecting quotes: a '>' inside an
+            // attribute value is legal XML, and constraints are full of
+            // them — `constraint=". > 0"` is an ordinary form.
+            let end = close_of_tag(xml, i).ok_or("unterminated tag")?;
             let inner = &xml[i + 1..end];
             while chars.peek().is_some_and(|(j, _)| *j <= end) {
                 chars.next();
@@ -281,6 +284,22 @@ impl Instance {
         instance.set_root(root);
         Ok(instance)
     }
+}
+
+/// Index of the `>` that closes the tag opening at `start`, skipping any
+/// inside quoted attribute values.
+fn close_of_tag(xml: &str, start: usize) -> Option<usize> {
+    let mut quote: Option<char> = None;
+    for (offset, c) in xml[start..].char_indices() {
+        match (quote, c) {
+            (Some(q), c) if c == q => quote = None,
+            (Some(_), _) => {}
+            (None, '"') | (None, '\'') => quote = Some(c),
+            (None, '>') => return Some(start + offset),
+            (None, _) => {}
+        }
+    }
+    None
 }
 
 fn local_name(qname: &str) -> String {
@@ -397,6 +416,25 @@ mod tests {
         assert_eq!(instance.string_value(children[0]), "x & y");
         assert_eq!(instance.string_value(children[1]), "");
         assert_eq!(instance.string_value(children[2]), "z");
+    }
+
+    #[test]
+    fn a_greater_than_inside_an_attribute_is_not_the_end_of_the_tag() {
+        // Legal XML, and what every numeric constraint looks like. Scanning
+        // for the first '>' cuts the tag in half and the parse fails on the
+        // next closing tag, a long way from the cause.
+        let instance =
+            Instance::from_xml(r#"<data note="a > b and c &lt; d"><x>1</x></data>"#).unwrap();
+        let root = instance.root().unwrap();
+        assert_eq!(
+            instance
+                .attributes(root)
+                .iter()
+                .map(|a| instance.node(*a).value.clone())
+                .collect::<Vec<_>>(),
+            vec!["a > b and c < d"]
+        );
+        assert_eq!(instance.children(root).len(), 1);
     }
 
     #[test]

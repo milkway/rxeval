@@ -27,11 +27,13 @@
 pub mod eval;
 pub mod functions;
 pub mod parser;
+pub mod portability;
 pub mod rules;
 pub mod tree;
 
 pub use eval::{evaluate, Context, Environment, Fixed, Value};
 pub use parser::{parse, Expr};
+pub use portability::{check_form, Breaks, Issue};
 pub use rules::{Binding, Clock, Form, Rules, Violation, ViolationKind};
 pub use tree::{Instance, NodeId};
 
