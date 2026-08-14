@@ -17,7 +17,6 @@ count(/data/missing)
 count(//idade)
 /data/@id
 /data/@version
-../age
 .
 //nome
 

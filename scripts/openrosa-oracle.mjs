@@ -69,7 +69,16 @@ function describe(result) {
   }
 }
 
-const results = {};
+// Which build answered, so a fixture that moves can be explained.
+const pkg = JSON.parse(
+  readFileSync(
+    new URL('./node_modules/openrosa-xpath-evaluator/package.json', import.meta.url),
+    'utf8'
+  )
+);
+const results = {
+  $meta: { engine: 'openrosa-xpath-evaluator', version: pkg.version },
+};
 for (const line of corpus.split('\n')) {
   const expression = line.trim();
   if (!expression || expression.startsWith('#')) continue;

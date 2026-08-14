@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<!--
+  The oracle instance as a form.
+
+  JavaRosa needs this, not just the data: without a definition it cannot
+  tell that `resident` repeats, every element gets the same multiplicity,
+  and a positional predicate matches nothing. Collect always has the form
+  in hand, so evaluating against a bare instance would have measured the
+  harness rather than the engine.
+
+  The structure mirrors tests/oracle/instance.xml exactly; the values come
+  from that file at load time.
+-->
+<h:html xmlns="http://www.w3.org/2002/xforms"
+        xmlns:h="http://www.w3.org/1999/xhtml"
+        xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Oracle</h:title>
+    <model>
+      <instance>
+        <data id="oracle" version="1">
+          <age/>
+          <income/>
+          <zero/>
+          <negative/>
+          <consent/>
+          <name/>
+          <spaced/>
+          <services/>
+          <one_service/>
+          <blank/>
+          <date/>
+          <stamp/>
+          <cpf/>
+          <household>
+            <resident jr:template="">
+              <nome/>
+              <idade/>
+            </resident>
+          </household>
+        </data>
+      </instance>
+      <bind nodeset="/data/age" type="int"/>
+      <bind nodeset="/data/income" type="decimal"/>
+      <bind nodeset="/data/zero" type="int"/>
+      <bind nodeset="/data/negative" type="int"/>
+      <bind nodeset="/data/consent" type="string"/>
+      <bind nodeset="/data/name" type="string"/>
+      <bind nodeset="/data/spaced" type="string"/>
+      <bind nodeset="/data/services" type="string"/>
+      <bind nodeset="/data/one_service" type="string"/>
+      <bind nodeset="/data/blank" type="string"/>
+      <bind nodeset="/data/date" type="date"/>
+      <bind nodeset="/data/stamp" type="dateTime"/>
+      <bind nodeset="/data/cpf" type="string"/>
+      <bind nodeset="/data/household/resident/nome" type="string"/>
+      <bind nodeset="/data/household/resident/idade" type="int"/>
+    </model>
+  </h:head>
+  <h:body>
+    <input ref="/data/age"><label>age</label></input>
+    <input ref="/data/income"><label>income</label></input>
+    <input ref="/data/zero"><label>zero</label></input>
+    <input ref="/data/negative"><label>negative</label></input>
+    <input ref="/data/consent"><label>consent</label></input>
+    <input ref="/data/name"><label>name</label></input>
+    <input ref="/data/spaced"><label>spaced</label></input>
+    <input ref="/data/services"><label>services</label></input>
+    <input ref="/data/one_service"><label>one_service</label></input>
+    <input ref="/data/blank"><label>blank</label></input>
+    <input ref="/data/date"><label>date</label></input>
+    <input ref="/data/stamp"><label>stamp</label></input>
+    <input ref="/data/cpf"><label>cpf</label></input>
+    <group ref="/data/household">
+      <label>household</label>
+      <repeat nodeset="/data/household/resident">
+        <input ref="/data/household/resident/nome"><label>nome</label></input>
+        <input ref="/data/household/resident/idade"><label>idade</label></input>
+      </repeat>
+    </group>
+  </h:body>
+</h:html>

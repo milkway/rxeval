@@ -252,11 +252,15 @@ pub fn call(
         // here, where XPath calls any non-empty string true.
         "boolean-from-string" => {
             arity(&[1])?;
-            // Case-sensitive, as both reference engines are: "TRUE" is not
-            // true. A form that writes it that way has a bug, and hiding
-            // the bug behind a helpful comparison is worse than the false.
+            // Case-insensitive, following JavaRosa. Enketo accepts only
+            // lowercase "true", so the two references part ways here; the
+            // engine that collected the data is the one worth agreeing
+            // with, since a form that wrote "TRUE" was already recorded as
+            // true on the tablet.
             let value = text(0)?;
-            Ok(Value::Boolean(value == "1" || value == "true"))
+            Ok(Value::Boolean(
+                value == "1" || value.eq_ignore_ascii_case("true"),
+            ))
         }
 
         // ---- number
