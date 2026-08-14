@@ -1,0 +1,12 @@
+[package]
+name = "rxeval"
+version = "0.1.0"
+description = "Evaluate ODK/OpenRosa XForms logic: XPath with the OpenRosa extensions, over a form instance"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords = ["odk", "xforms", "xpath", "openrosa", "survey"]
+categories = ["parser-implementations"]
+
+[dependencies]
