@@ -5,13 +5,15 @@
 # platform serves every Python from 3.8 up, so the matrix is platforms and
 # not platforms × interpreter versions.
 #
-# Publishing is manual on purpose: a tag should not be able to push to PyPI
-# on its own. Run the workflow, download the artefact, look at it, upload it.
+# Publishing goes through PyPI's trusted publishing: GitHub proves who it is
+# with a short-lived OIDC token and no long-lived secret exists anywhere. It
+# runs only for a published release, and through an environment, so a push
+# cannot reach PyPI on its own.
 name: python wheels
 
 on:
-  push:
-    tags: ["v*"]
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -61,3 +63,28 @@ jobs:
         with:
           name: wheels-sdist
           path: dist
+
+  publish:
+    name: publish to PyPI
+    needs: [wheels, sdist]
+    runs-on: ubuntu-latest
+    # Only a published release, never a push. And through an environment, so
+    # the repository's settings can require an approval before it runs.
+    if: github.event_name == 'release'
+    environment:
+      name: pypi
+      url: https://pypi.org/project/rxeval/
+    permissions:
+      # The whole of the credential: a token minted for this run, by GitHub,
+      # which PyPI verifies and then forgets. Nothing to leak, nothing to
+      # rotate, nothing to put in a secret.
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist
+      - name: what is about to be published
+        run: ls -la dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
