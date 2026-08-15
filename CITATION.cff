@@ -22,7 +22,7 @@ abstract: >-
   rxeval evaluates the logic inside an ODK/OpenRosa XForm — relevant,
   constraint, required and calculate — as XPath 1.0 with the OpenRosa
   extensions, with no dependencies, on a server, in a browser through
-  WebAssembly, and in R. The ODK ecosystem has two evaluation engines,
+  WebAssembly, in Python and in R. The ODK ecosystem has two evaluation engines,
   JavaRosa inside ODK Collect and Enketo's openrosa-xpath-evaluator inside
   web forms, and neither is a superset of the other. Every rule in rxeval
   was decided by putting the same expression to both and reading the two

@@ -7,7 +7,7 @@
 
 Runs the logic inside an ODK/OpenRosa form — `relevant`, `constraint`,
 `required`, `calculate` — in Rust, with no dependencies. On a server, in a
-browser through WebAssembly, and in R.
+browser through WebAssembly, in Python, and in R.
 
 A form is a small program. Until something runs it, a server can only take
 whatever a device sends and hope the device was right. rxeval is that
@@ -101,11 +101,11 @@ single pass. Only paths whose value actually changed are reported — a
 renderer redrawing every calculated field on every keystroke fights the
 cursor.
 
-## The same engine in three places
+## The same engine in four places
 
 ![rxeval architecture](https://raw.githubusercontent.com/milkway/rxeval/main/docs/architecture.svg)
 
-One implementation, compiled three ways. A web form that asked a server what
+One implementation, compiled four ways. A web form that asked a server what
 its own rules mean needs a connection for every keystroke, which rules out
 the place survey work happens — a bus stop, a doorway, a basement. Compiling
 the same Rust to WebAssembly removes the network from the interview without

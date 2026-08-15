@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>rxeval — rode a lógica de um formulário ODK, em Rust</title>
-<meta name="description" content="O rxeval avalia a lógica de XForms — relevant, constraint, required, calculate — sem dependências, no servidor, no navegador via WebAssembly e no R. Cada regra decidida perguntando ao JavaRosa e ao Enketo e lendo as duas respostas.">
+<meta name="description" content="O rxeval avalia a lógica de XForms — relevant, constraint, required, calculate — sem dependências, no servidor, no navegador via WebAssembly, no Python e no R. Cada regra decidida perguntando ao JavaRosa e ao Enketo e lendo as duas respostas.">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -52,7 +52,7 @@
       e torcer para que o aparelho estivesse certo. O <strong class="text-(--text) font-semibold">rxeval</strong>
       é esse algo: XPath 1.0 com as extensões do OpenRosa, avaliado sobre a
       instância de um formulário, sem dependências — no servidor, no navegador via
-      WebAssembly e no R.
+      WebAssembly, no Python e no R.
     </p>
 
     <div class="rise-4 mt-9 flex flex-wrap items-center gap-3">
@@ -204,11 +204,11 @@ outcome.relevant["/data/resident[2]/works"]  <span class="text-amber-300">falso<
   </div>
 </section>
 
-<!-- ======================= three targets ======================= -->
+<!-- ======================= four targets ======================= -->
 <section>
   <div class="mx-auto max-w-6xl px-5 py-20">
-    <p class="font-mono text-[13px] tracking-[0.15em] uppercase text-(--accent)">uma implementação, compilada de três jeitos</p>
-    <h2 class="font-display mt-3 max-w-3xl text-4xl font-semibold tracking-tight">A mesma resposta no servidor, no celular e num script de análise.</h2>
+    <p class="font-mono text-[13px] tracking-[0.15em] uppercase text-(--accent)">uma implementação, compilada de quatro jeitos</p>
+    <h2 class="font-display mt-3 max-w-3xl text-4xl font-semibold tracking-tight">A mesma resposta no servidor, no celular e no script que escreveu o formulário.</h2>
     <p class="mt-5 max-w-3xl text-lg leading-relaxed text-(--muted)">
       Um formulário web que perguntasse ao servidor o que as próprias regras
       significam precisaria de conexão a cada tecla, o que exclui justamente o lugar
@@ -218,10 +218,10 @@ outcome.relevant["/data/resident[2]/works"]  <span class="text-amber-300">falso<
     </p>
 
     <figure class="mt-10">
-      <img src="../architecture.svg" alt="Um XForm e uma instância entram no rxeval, que compila para código nativo, WebAssembly e R; os três dão o mesmo veredito." class="w-full rounded-lg border border-(--rule) bg-(--surface)">
+      <img src="../architecture.svg" alt="Um XForm e uma instância entram no rxeval, que compila para código nativo, WebAssembly, Python e R; os quatro dão o mesmo veredito." class="w-full rounded-lg border border-(--rule) bg-(--surface)">
     </figure>
 
-    <div class="mt-10 grid gap-4 sm:grid-cols-3">
+    <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div class="rounded-lg border border-(--rule) bg-(--surface) p-5">
         <p class="font-mono text-sm text-(--accent)">native</p>
         <p class="mt-2 text-[15px] leading-relaxed text-(--muted)">Um servidor conferindo o que chegou, contra o formulário que publicou.</p>
@@ -231,8 +231,12 @@ outcome.relevant["/data/resident[2]/works"]  <span class="text-amber-300">falso<
         <p class="mt-2 text-[15px] leading-relaxed text-(--muted)">Um navegador preenchendo um formulário sem sinal, decidindo localmente.</p>
       </div>
       <div class="rounded-lg border border-(--rule) bg-(--surface) p-5">
+        <p class="font-mono text-sm text-(--accent)">Python</p>
+        <p class="mt-2 text-[15px] leading-relaxed text-(--muted)">O script que escreve o formulário, conferindo antes de publicá-lo. O pyxform é Python.</p>
+      </div>
+      <div class="rounded-lg border border-(--rule) bg-(--surface) p-5">
         <p class="font-mono text-sm text-(--accent)">R</p>
-        <p class="mt-2 text-[15px] leading-relaxed text-(--muted)">Conferindo um questionário a partir de um script de análise, antes do campo.</p>
+        <p class="mt-2 text-[15px] leading-relaxed text-(--muted)">Um questionário lido a partir de um script de análise, antes do campo.</p>
       </div>
     </div>
   </div>
