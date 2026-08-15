@@ -29,8 +29,13 @@ jobs:
         platform:
           - { runner: ubuntu-latest,  target: x86_64 }
           - { runner: ubuntu-latest,  target: aarch64 }
+          # Both macOS targets from the ARM runner: macos-13 was retired and
+          # its jobs sit in the queue for ever, which would hold the publish
+          # step behind a runner that is not coming. Rust cross-compiles to
+          # x86_64-apple-darwin without help, and there is no C here to make
+          # that harder than it sounds.
           - { runner: macos-latest,   target: aarch64 }
-          - { runner: macos-13,       target: x86_64 }
+          - { runner: macos-latest,   target: x86_64 }
           - { runner: windows-latest, target: x64 }
     steps:
       - uses: actions/checkout@v4
