@@ -2,7 +2,8 @@ Package: rxeval
 Title: Evaluate ODK/OpenRosa XForms Logic
 Version: 0.1.1
 Authors@R: 
-    person("André", "Leite", , "leite@de.ufpe.br", role = c("aut", "cre"))
+    person("André", "Leite", , "leite@de.ufpe.br", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-4718-9766"))
 Description: Check what a questionnaire own rules say about a submission,
     and which of its expressions will behave differently on a tablet than
     in a browser. Wraps the rxeval Rust crate.
