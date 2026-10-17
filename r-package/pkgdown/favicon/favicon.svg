@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 181 209" width="181" height="209"><metadata><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/"><rdf:Description><dc:creator>RealFaviconGenerator</dc:creator><dc:source>https://realfavicongenerator.net</dc:source></rdf:Description></rdf:RDF></metadata><defs>
+    <clipPath id="hex-clip">
+      <polygon points="90.5,2.5 177.5,52.5 177.5,156.5 90.5,206.5 3.5,156.5 3.5,52.5"></polygon>
+    </clipPath>
+  </defs><polygon points="90.5,2.5 177.5,52.5 177.5,156.5 90.5,206.5 3.5,156.5 3.5,52.5" fill="#1b2a41"></polygon><g clip-path="url(#hex-clip)" stroke="#46587a" stroke-width="0.6" opacity="0.35">
+    <path d="M-10 62h210M-10 92h210M-10 122h210M-10 152h210" fill="none"></path>
+  </g><g transform="translate(90.5,92) scale(2.6)">
+    <path d="M-10.5 -12l-5.5 12 5.5 12" stroke="#82b3e8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+    <path d="M10.5 -12l5.5 12-5.5 12" stroke="#82b3e8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+    <path d="M-6 2l4.5 4.5 8-11" stroke="#5fc26a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+  </g><text x="90.5" y="172" text-anchor="middle" font-family="'SF Mono','JetBrains Mono','Fira Mono',Menlo,Consolas,monospace" font-size="27" font-weight="600" fill="#d5e2f2" letter-spacing="1">rxeval</text><polygon points="90.5,2.5 177.5,52.5 177.5,156.5 90.5,206.5 3.5,156.5 3.5,52.5" fill="none" stroke="#82b3e8" stroke-width="3"></polygon></svg>

@@ -1,2 +1,5 @@
 ^src/rust/target$
 ^\.Rproj\.user$
+^_pkgdown\.yml$
+^vignettes$
+^pkgdown$

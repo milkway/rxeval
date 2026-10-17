@@ -18,5 +18,6 @@ Depends:
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
-URL: https://milkway.github.io/rxeval/, https://github.com/milkway/rxeval
+URL: https://milkway.github.io/rxeval/r/, https://github.com/milkway/rxeval,
+    https://milkway.github.io/rxeval/
 BugReports: https://github.com/milkway/rxeval/issues

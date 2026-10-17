@@ -1,0 +1,59 @@
+url: https://milkway.github.io/rxeval/r/
+destination: ../docs/r
+
+# The same palette as the project site (docs/assets/site.css), so walking
+# from milkway.github.io/rxeval/ into /r/ does not feel like leaving.
+template:
+  bootstrap: 5
+  bslib:
+    bg: "#faf6ee"
+    fg: "#1b2a41"
+    primary: "#3b6ea5"
+    link-color: "#3b6ea5"
+    code-bg: "#131a26"
+    code-color: "#d5e2f2"
+
+home:
+  title: "rxeval — run the logic inside an ODK form, from R"
+  description: >
+    Evaluate an ODK/OpenRosa form's relevant, constraint, required and
+    calculate rules against collected data, and check whether a form will
+    behave the same on a tablet and in a browser.
+
+navbar:
+  structure:
+    left: [reference, articles]
+    right: [engine, github]
+  components:
+    engine:
+      text: The engine
+      href: https://milkway.github.io/rxeval/
+    github:
+      icon: fab fa-github
+      href: https://github.com/milkway/rxeval
+      aria-label: GitHub
+
+reference:
+  - title: "Check a form before the field"
+    desc: >
+      The gaps between JavaRosa and Enketo do not announce themselves —
+      an expression one engine cannot evaluate usually yields nothing
+      rather than an error.
+    contents:
+      - form_portability
+  - title: "Check submissions after it"
+    contents:
+      - submission_findings
+  - title: "Try a rule by hand"
+    contents:
+      - eval_expression
+  - title: internal
+    contents:
+      - rust_eval_expression
+      - rust_form_portability
+      - rust_submission_findings
+
+articles:
+  - title: "Walkthrough"
+    contents:
+      - articles/rxeval

@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <h:head>
+    <h:title>Household visit</h:title>
+    <model odk:xforms-version="1.0.0">
+      <instance>
+        <data id="visit" version="1">
+          <residents/>
+          <respondent/>
+          <resident jr:template="">
+            <name/>
+            <age/>
+          </resident>
+          <resident>
+            <name/>
+            <age/>
+          </resident>
+          <youngest_entered/>
+          <meta>
+            <instanceID/>
+          </meta>
+        </data>
+      </instance>
+      <bind constraint=". &lt;= 20" jr:constraintMsg="More than 20 residents needs a supervisor's note." nodeset="/data/residents" required="true()" type="int"/>
+      <bind nodeset="/data/respondent" required="true()" type="string"/>
+      <bind nodeset="/data/resident/name" type="string"/>
+      <bind constraint=". &gt;= 0 and . &lt;= 120" jr:constraintMsg="An age is between 0 and 120." nodeset="/data/resident/age" type="int"/>
+      <bind calculate="/data/resident[last()]/age" nodeset="/data/youngest_entered" type="string"/>
+      <bind jr:preload="uid" nodeset="/data/meta/instanceID" readonly="true()" type="string"/>
+    </model>
+  </h:head>
+  <h:body>
+    <input ref="/data/residents">
+      <label>How many people live in this household?</label>
+    </input>
+    <input ref="/data/respondent">
+      <label>Who answered the interview?</label>
+    </input>
+    <group ref="/data/resident">
+      <label>One line per resident</label>
+      <repeat nodeset="/data/resident">
+        <input ref="/data/resident/name">
+          <label>Name</label>
+        </input>
+        <input ref="/data/resident/age">
+          <label>Age</label>
+        </input>
+      </repeat>
+    </group>
+  </h:body>
+</h:html>

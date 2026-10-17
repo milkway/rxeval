@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<data id="visit" version="1">
+  <residents>25</residents>
+  <respondent/>
+  <resident>
+    <name>Ana</name>
+    <age>34</age>
+  </resident>
+  <resident>
+    <name>Bia</name>
+    <age>2</age>
+  </resident>
+  <youngest_entered/>
+  <meta>
+    <instanceID>uuid:6f1c2b34-0000-4000-8000-000000000001</instanceID>
+  </meta>
+</data>

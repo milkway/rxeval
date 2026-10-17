@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 181 209" width="181" height="209">
+  <!-- The hex sticker. Same motif as the project's favicon: an expression,
+       and the verdict it produces — drawn with the site's own palette. -->
+  <defs>
+    <clipPath id="hex-clip">
+      <polygon points="90.5,2.5 177.5,52.5 177.5,156.5 90.5,206.5 3.5,156.5 3.5,52.5"/>
+    </clipPath>
+  </defs>
+
+  <!-- plate -->
+  <polygon points="90.5,2.5 177.5,52.5 177.5,156.5 90.5,206.5 3.5,156.5 3.5,52.5"
+           fill="#1b2a41"/>
+
+  <!-- a quiet grid of evaluation, clipped to the hex -->
+  <g clip-path="url(#hex-clip)" stroke="#46587a" stroke-width="0.6" opacity="0.35">
+    <path d="M-10 62h210M-10 92h210M-10 122h210M-10 152h210" fill="none"/>
+  </g>
+
+  <!-- the expression, and the verdict -->
+  <g transform="translate(90.5,92) scale(2.6)">
+    <path d="M-10.5 -12l-5.5 12 5.5 12" stroke="#82b3e8" stroke-width="2.6"
+          stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M10.5 -12l5.5 12-5.5 12" stroke="#82b3e8" stroke-width="2.6"
+          stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M-6 2l4.5 4.5 8-11" stroke="#5fc26a" stroke-width="2.6"
+          stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="90.5" y="172" text-anchor="middle"
+        font-family="'SF Mono','JetBrains Mono','Fira Mono',Menlo,Consolas,monospace"
+        font-size="27" font-weight="600" fill="#d5e2f2" letter-spacing="1">rxeval</text>
+
+  <!-- rim -->
+  <polygon points="90.5,2.5 177.5,52.5 177.5,156.5 90.5,206.5 3.5,156.5 3.5,52.5"
+           fill="none" stroke="#82b3e8" stroke-width="3"/>
+</svg>
