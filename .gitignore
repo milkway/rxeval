@@ -1,8 +1,10 @@
 # `target/` and not `/target`: the Rust output appears under python/ and
 # r-package/ too, and the anchored form let 600 build artefacts into a
 # public repository before anyone looked.
+# Lockfiles are committed: on 2026-10-17 the zip crate un-yanked 2.6.1
+# (yanked since 2025-05 for a breaking change) and every fresh resolve of
+# calamine ^0.26 started failing to compile. CI builds --locked.
 target/
-Cargo.lock
 node_modules/
 # fetched with Maven for the JavaRosa side of the oracle; never committed
 lib/
