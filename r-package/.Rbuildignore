@@ -3,3 +3,4 @@
 ^_pkgdown\.yml$
 ^vignettes$
 ^pkgdown$
+^cran-comments\.md$
