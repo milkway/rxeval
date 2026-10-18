@@ -3,7 +3,9 @@ TARGET = $(subst 64,x86_64,$(subst 32,i686,$(WIN)))-pc-windows-gnu
 TARGET_DIR = ./rust/target
 LIBDIR = $(TARGET_DIR)/$(TARGET)/@LIBDIR@
 STATLIB = $(LIBDIR)/librxevalr.a
-PKG_LIBS = -L$(LIBDIR) -lrxevalr -lws2_32 -ladvapi32 -luserenv -lbcrypt -lntdll
+# -ldbghelp: rustc's --print=native-static-libs on win-builder lists it
+# (std's backtrace on windows-gnu); mingw-w64 ships the import library.
+PKG_LIBS = -L$(LIBDIR) -lrxevalr -lws2_32 -ladvapi32 -luserenv -lbcrypt -lntdll -ldbghelp
 
 all: $(SHLIB) rust_clean
 
@@ -36,10 +38,12 @@ $(STATLIB):
 	export LIBRARY_PATH="$(LIBRARY_PATH);$(CURDIR)/$(TARGET_DIR)/libgcc_mock" && \
 	RUSTFLAGS="$(RUSTFLAGS) --print=native-static-libs" cargo build @CRAN_FLAGS@ --target=$(TARGET) --lib @PROFILE@ --manifest-path=rust/Cargo.toml --target-dir=$(TARGET_DIR)
 
-	# Generate wrappers
-	export CARGO_HOME=$(CARGOTMP) && \
-	export PATH="$(PATH):$(HOME)/.cargo/bin" && \
-	cargo run @CRAN_FLAGS@ --bin document --target $(TARGET) --manifest-path=./rust/Cargo.toml --target-dir $(TARGET_DIR)
+	# The R wrappers (R/extendr-wrappers.R) are generated at development
+	# time (`cargo run --bin document`) and travel in the tarball; nothing
+	# runs or is rewritten at install time. Generating them here is what
+	# failed CRAN's Windows pretest: the document bin's debug build-script
+	# came out unrunnable (os error 193), after the static library above
+	# had already compiled cleanly.
 
 	# Always clean up CARGOTMP
 	rm -Rf $(CARGOTMP);

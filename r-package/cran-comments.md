@@ -1,5 +1,18 @@
 # cran-comments
 
+## Resubmission
+
+This fixes both findings of the incoming pretest on 0.1.1:
+
+* Windows installation ERROR: the install used to run a second cargo step
+  that regenerated the (already shipped) R wrapper file, and that step's
+  build script failed on win-builder after the static library itself had
+  compiled cleanly. The wrappers are generated at development time and
+  travel in the tarball; nothing is generated at install time any more.
+* "Possibly misspelled words" NOTE: ODK, OpenRosa and XForms are the proper
+  names of the form standard and its ecosystem; they are now quoted in the
+  Title.
+
 ## New submission
 
 rxeval evaluates the logic embedded in ODK/OpenRosa XForms — the
