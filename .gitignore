@@ -6,6 +6,8 @@
 # calamine ^0.26 started failing to compile. CI builds --locked.
 target/
 node_modules/
+# Claude Code's project notes stay local
+CLAUDE.md
 # fetched with Maven for the JavaRosa side of the oracle; never committed
 lib/
 .DS_Store
