@@ -21,7 +21,7 @@ evaluate raises an error rather than returning a plausible value.
 For working out what a rule does before writing it into a form.
 }
 \examples{
-\dontrun{
-eval_expression("count(/data/resident)", "submission.xml")
-}
+submission <- system.file("extdata", "visit-submission.xml", package = "rxeval")
+eval_expression("count(/data/resident)", submission)
+eval_expression("/data/residents > count(/data/resident)", submission)
 }

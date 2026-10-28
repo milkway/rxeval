@@ -17,10 +17,9 @@
 #'   anywhere. `suggestion` is a rewrite that means one thing in both, or
 #'   `NA` when there is none to give. Zero rows means the form travels.
 #' @examples
-#' \dontrun{
-#' issues <- form_portability("survey.xml")
-#' issues[issues$breaks == "both, differently", c("path", "says")]
-#' }
+#' form <- system.file("extdata", "visit.xml", package = "rxeval")
+#' issues <- form_portability(form)
+#' issues[, c("path", "breaks", "suggestion")]
 #' @export
 form_portability <- function(form) {
   stopifnot(is.character(form), length(form) == 1L)
@@ -47,10 +46,10 @@ form_portability <- function(form) {
 #'   `calculation`, `not-evaluated`) and `says`. Zero rows means every rule
 #'   held.
 #' @examples
-#' \dontrun{
-#' findings <- submission_findings("survey.xml", "submission.xml")
-#' table(findings$kind)
-#' }
+#' form <- system.file("extdata", "visit.xml", package = "rxeval")
+#' submission <- system.file("extdata", "visit-submission.xml", package = "rxeval")
+#' findings <- submission_findings(form, submission)
+#' findings[, c("path", "kind")]
 #' @export
 submission_findings <- function(form, submission, today = NULL, now = NULL) {
   stopifnot(is.character(form), is.character(submission))
@@ -67,9 +66,9 @@ submission_findings <- function(form, submission, today = NULL, now = NULL) {
 #' @return A length-one character vector. An expression this engine cannot
 #'   evaluate raises an error rather than returning a plausible value.
 #' @examples
-#' \dontrun{
-#' eval_expression("count(/data/resident)", "submission.xml")
-#' }
+#' submission <- system.file("extdata", "visit-submission.xml", package = "rxeval")
+#' eval_expression("count(/data/resident)", submission)
+#' eval_expression("/data/residents > count(/data/resident)", submission)
 #' @export
 eval_expression <- function(expression, submission, today = NULL, now = NULL) {
   stopifnot(is.character(expression), length(expression) == 1L)

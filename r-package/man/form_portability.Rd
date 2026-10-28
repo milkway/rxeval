@@ -29,8 +29,7 @@ Every rule behind this was found by putting the same expression to both
 engines and reading the two answers.
 }
 \examples{
-\dontrun{
-issues <- form_portability("survey.xml")
-issues[issues$breaks == "both, differently", c("path", "says")]
-}
+form <- system.file("extdata", "visit.xml", package = "rxeval")
+issues <- form_portability(form)
+issues[, c("path", "breaks", "suggestion")]
 }

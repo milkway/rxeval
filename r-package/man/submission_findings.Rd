@@ -32,8 +32,8 @@ as a pass: a rule that did not run has not been satisfied, and reporting
 it as clean would be the one failure worth avoiding.
 }
 \examples{
-\dontrun{
-findings <- submission_findings("survey.xml", "submission.xml")
-table(findings$kind)
-}
+form <- system.file("extdata", "visit.xml", package = "rxeval")
+submission <- system.file("extdata", "visit-submission.xml", package = "rxeval")
+findings <- submission_findings(form, submission)
+findings[, c("path", "kind")]
 }

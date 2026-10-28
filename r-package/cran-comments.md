@@ -2,6 +2,20 @@
 
 ## Resubmission
 
+This addresses both points of the manual review of 0.1.2:
+
+* `\dontrun{}`: removed everywhere. The examples no longer need any
+  wrapper — they run in well under a second against a sample form and
+  submission now read from `inst/extdata` with `system.file()`.
+* Package size: the package is fully developed. It deliberately exposes a
+  small, complete surface — the three questions one asks of XForms logic
+  (does the form travel across engines, what do its rules say about a
+  submission, what does one expression evaluate to) — backed by a full
+  XPath/ODK evaluation engine compiled into the package. There is no
+  further functionality waiting to be added.
+
+## Earlier resubmission (0.1.2)
+
 This fixes both findings of the incoming pretest on 0.1.1:
 
 * Windows installation ERROR: the install used to run a second cargo step
