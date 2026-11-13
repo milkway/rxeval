@@ -189,14 +189,14 @@ checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 
 [[package]]
 name = "rxeval"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "regex",
 ]
 
 [[package]]
 name = "rxeval-python"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "pyo3",
  "rxeval",
