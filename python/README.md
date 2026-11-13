@@ -4,6 +4,12 @@ Run the logic inside an ODK/OpenRosa form — `relevant`, `constraint`,
 `required`, `calculate` — from Python. The engine is Rust with no
 dependencies; this is a binding to it.
 
+> An independent project, not affiliated with, maintained by or endorsed by
+> ODK (getodk.org) or Enketo. Its behaviour was decided against two reference
+> engines, used as oracles: [JavaRosa](https://github.com/getodk/javarosa)
+> 5.1.0 and Enketo's
+> [openrosa-xpath-evaluator](https://github.com/enketo/openrosa-xpath-evaluator).
+
 A form is a small program. Until something runs it, a server can only take
 whatever a device sends and hope the device was right.
 

@@ -13,7 +13,10 @@ Authors@R: c(
     )
 Description: Check what a questionnaire's own rules say about a submission,
     and which of its expressions will behave differently on a tablet than
-    in a browser. Wraps the 'rxeval' 'Rust' crate.
+    in a browser. Wraps the 'rxeval' 'Rust' crate, whose behaviour was
+    decided by comparing the two reference engines of the ecosystem,
+    'JavaRosa' and 'Enketo', used as oracles. An independent project, not
+    affiliated with or endorsed by 'ODK' or 'Enketo'.
 License: BSD_2_clause + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

@@ -32,3 +32,17 @@ abstract: >-
   follows and why. The same reading drives a portability check that reports,
   before collection begins, which of a form's rules will behave differently
   on a tablet and in a browser.
+references:
+  - type: software
+    title: "JavaRosa"
+    authors:
+      - name: "The JavaRosa contributors (ODK)"
+    version: "5.1.0"
+    repository-code: "https://github.com/getodk/javarosa"
+    notes: "Reference engine (ODK Collect, KoboCollect) used as an oracle: the answers in tests/oracle/javarosa-expected.json come from it."
+  - type: software
+    title: "openrosa-xpath-evaluator"
+    authors:
+      - name: "The Enketo contributors"
+    repository-code: "https://github.com/enketo/openrosa-xpath-evaluator"
+    notes: "Reference engine (Enketo web forms) used as an oracle: the answers in tests/oracle/expected.json come from it."
