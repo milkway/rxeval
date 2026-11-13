@@ -5,7 +5,7 @@ LIBDIR = $(TARGET_DIR)/$(TARGET)/@LIBDIR@
 STATLIB = $(LIBDIR)/librxevalr.a
 # -ldbghelp: rustc's --print=native-static-libs on win-builder lists it
 # (std's backtrace on windows-gnu); mingw-w64 ships the import library.
-PKG_LIBS = -L$(LIBDIR) -lrxevalr -lws2_32 -ladvapi32 -luserenv -lbcrypt -lntdll -ldbghelp
+PKG_LIBS = -L$(LIBDIR) -lrxevalr -lws2_32 -ladvapi32 -luserenv -lbcrypt -lntdll -lsynchronization -ldbghelp
 
 all: $(SHLIB) rust_clean
 
