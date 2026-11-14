@@ -30,7 +30,7 @@
 
     <a class="navbar-brand me-2" href="index.html">rxeval</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -60,6 +60,9 @@
 <p>Runs the logic inside an ODK/OpenRosa form — <code>relevant</code>, <code>constraint</code>, <code>required</code>, <code>calculate</code> — from R, before the field and after it.</p>
 <p>A form is a small program. Until something runs it, an analysis script can only take whatever the devices sent and hope the devices were right. rxeval is that something: it evaluates the questionnaire’s own rules over collected data and answers what the form says — and it reads a form the way <strong>both</strong> engines in the ecosystem do, JavaRosa (ODK Collect, KoboCollect) and Enketo (web forms), so it can also say where the two will disagree before anyone collects a byte.</p>
 <p>The engine is the <a href="https://milkway.github.io/rxeval/" class="external-link">rxeval Rust crate</a>; this package is the same engine compiled into R, not a reimplementation.</p>
+<blockquote>
+<p>An independent project, not affiliated with, maintained by or endorsed by ODK (getodk.org) or Enketo. Its behaviour was decided against two reference engines, used as oracles: <a href="https://github.com/getodk/javarosa" class="external-link">JavaRosa</a> 5.1.0 and Enketo’s <a href="https://github.com/enketo/openrosa-xpath-evaluator" class="external-link">openrosa-xpath-evaluator</a>.</p>
+</blockquote>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
@@ -73,7 +76,7 @@
 </h2>
 <p>Three functions, three questions:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://milkway.github.io/rxeval/" class="external-link">rxeval</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://milkway.github.io/rxeval/r/">rxeval</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">form</span>       <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"visit.xml"</span>, package <span class="op">=</span> <span class="st">"rxeval"</span><span class="op">)</span></span>
@@ -141,6 +144,9 @@
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
 <li>André Leite <br><small class="roles"> Author, maintainer </small> <a href="https://orcid.org/0000-0002-4718-9766" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
+<li>Raydonal Ospina <br><small class="roles"> Author </small> <a href="https://orcid.org/0000-0002-9884-9090" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
+<li>Cristiano Ferraz <br><small class="roles"> Author </small> <a href="https://orcid.org/0000-0002-6838-6734" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
+<li><a href="authors.html">More about authors...</a></li>
 </ul>
 </div>
 
@@ -151,7 +157,7 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by André Leite.</p>
+  <p>Developed by André Leite, Raydonal Ospina, Cristiano Ferraz.</p>
 </div>
 
 <div class="pkgdown-footer-right">

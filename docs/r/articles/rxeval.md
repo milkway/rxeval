@@ -11,7 +11,7 @@ rxeval runs them. This walkthrough uses the small household form shipped
 with the package, and a submission with problems planted on purpose.
 
 \
-[`library`](https://rdrr.io/r/base/library.html)`(`[`rxeval`](https://milkway.github.io/rxeval/)`)`\
+[`library`](https://rdrr.io/r/base/library.html)`(`[`rxeval`](https://milkway.github.io/rxeval/r/)`)`\
 [`library`](https://rdrr.io/r/base/library.html)`(`[`dplyr`](https://dplyr.tidyverse.org)`)`\
 \
 `form``       ``<-`` `[`system.file`](https://rdrr.io/r/base/system.file.html)`(``"extdata"``, ``"visit.xml"``, package ``=`` ``"rxeval"``)`\

@@ -41,8 +41,12 @@ reporting it as clean would be the one failure worth avoiding.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-findings <- submission_findings("survey.xml", "submission.xml")
-table(findings$kind)
-} # }
+form <- system.file("extdata", "visit.xml", package = "rxeval")
+submission <- system.file("extdata", "visit-submission.xml", package = "rxeval")
+findings <- submission_findings(form, submission)
+findings[, c("path", "kind")]
+#>                     path        kind
+#> 1 /data/youngest_entered calculation
+#> 2        /data/residents  constraint
+#> 3       /data/respondent    required
 ```

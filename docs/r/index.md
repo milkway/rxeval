@@ -15,6 +15,12 @@ The engine is the [rxeval Rust
 crate](https://milkway.github.io/rxeval/); this package is the same
 engine compiled into R, not a reimplementation.
 
+> An independent project, not affiliated with, maintained by or endorsed
+> by ODK (getodk.org) or Enketo. Its behaviour was decided against two
+> reference engines, used as oracles:
+> [JavaRosa](https://github.com/getodk/javarosa) 5.1.0 and Enketo’s
+> [openrosa-xpath-evaluator](https://github.com/enketo/openrosa-xpath-evaluator).
+
 ## Installation
 
 The package compiles its engine on installation, so it needs a [Rust
@@ -29,7 +35,7 @@ toolchain](https://rustup.rs) (`rustc` ≥ 1.65):
 Three functions, three questions:
 
 \
-[`library`](https://rdrr.io/r/base/library.html)`(`[`rxeval`](https://milkway.github.io/rxeval/)`)`\
+[`library`](https://rdrr.io/r/base/library.html)`(`[`rxeval`](https://milkway.github.io/rxeval/r/)`)`\
 [`library`](https://rdrr.io/r/base/library.html)`(`[`dplyr`](https://dplyr.tidyverse.org)`)`\
 \
 `form``       ``<-`` `[`system.file`](https://rdrr.io/r/base/system.file.html)`(``"extdata"``, ``"visit.xml"``, package ``=`` ``"rxeval"``)`\

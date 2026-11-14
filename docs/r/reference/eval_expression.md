@@ -30,7 +30,9 @@ raises an error rather than returning a plausible value.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-eval_expression("count(/data/resident)", "submission.xml")
-} # }
+submission <- system.file("extdata", "visit-submission.xml", package = "rxeval")
+eval_expression("count(/data/resident)", submission)
+#> [1] "2"
+eval_expression("/data/residents > count(/data/resident)", submission)
+#> [1] "true"
 ```

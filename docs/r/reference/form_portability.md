@@ -35,8 +35,9 @@ engines and reading the two answers.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-issues <- form_portability("survey.xml")
-issues[issues$breaks == "both, differently", c("path", "says")]
-} # }
+form <- system.file("extdata", "visit.xml", package = "rxeval")
+issues <- form_portability(form)
+issues[, c("path", "breaks", "suggestion")]
+#>                     path                breaks            suggestion
+#> 1 /data/youngest_entered Collect / KoboCollect count() of the repeat
 ```
